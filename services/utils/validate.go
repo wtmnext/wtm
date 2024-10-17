@@ -3,6 +3,7 @@ package utils
 import (
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/nbittich/wtm/types"
@@ -13,6 +14,7 @@ var Validate *validator.Validate
 func init() {
 	Validate = validator.New(validator.WithRequiredStructEnabled())
 	Validate.RegisterValidation("password", validatePassword)
+	Validate.RegisterValidation("startswithalpha", validateStartsWithAlpha)
 }
 
 func ValidateStruct(s interface{}) error {
@@ -30,6 +32,16 @@ func ValidateStruct(s interface{}) error {
 		return types.InvalidFormError{Messages: errors}
 	}
 	return nil
+}
+
+func validateStartsWithAlpha(fl validator.FieldLevel) bool {
+	str := fl.Field().String()
+
+	if len(str) == 0 {
+		return false // Invalid if the string is empty
+	}
+
+	return unicode.IsLetter(rune(str[0]))
 }
 
 func validatePassword(fl validator.FieldLevel) bool {

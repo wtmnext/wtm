@@ -6,7 +6,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"github.com/nbittich/wtm/config"
 	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/email"
@@ -32,10 +34,19 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func NewUser(ctx context.Context, newUserForm *types.NewUserForm) (*types.User, error) {
+func GetUser(c echo.Context) *types.UserClaims {
+	if tok, ok := c.Get("user").(*jwt.Token); ok {
+		if user, ok := tok.Claims.(*types.UserClaims); ok {
+			return user
+		}
+	}
+	return nil
+}
+
+func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Group) (*types.User, error) {
 	lang := ctx.Value(types.LangKey).(string)
 	var err error
-	collection, err := db.GetCollection(UserCollection, newUserForm.Group)
+	collection, err := db.GetCollection(UserCollection, group)
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nbittich/wtm/config"
 	"github.com/nbittich/wtm/handlers"
+	adminHandlers "github.com/nbittich/wtm/handlers/admin"
 	appMidleware "github.com/nbittich/wtm/middleware"
 	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/email"
@@ -95,5 +96,6 @@ func main() {
 
 	handlers.UserRouter(e)
 	handlers.HomeRouter(e)
+	adminHandlers.UserRouter(e)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }

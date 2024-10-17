@@ -16,12 +16,28 @@ type UserActivationURL struct {
 }
 
 type NewUserForm struct {
-	Username        string `json:"username" form:"username" validate:"required,min=3,max=15"`
+	Username        string `json:"username" form:"username" validate:"required,min=3,max=15,alphanum,startswithalpha"`
 	Password        string `json:"password" form:"password" validate:"required,min=6,max=18,password"`
 	ConfirmPassword string `json:"confirmPassword" form:"confirmPassword" validate:"eqcsfield=Password"`
 	Email           string `json:"email" form:"email" validate:"required,email"`
 	ConfirmEmail    string `json:"confirmEmail" form:"confirmEmail" validate:"eqcsfield=Email"`
-	Group           Group  `json:"group" form:"gorup" validate:"required"`
+}
+
+type Organization struct {
+	ID             string            `bson:"_id" json:"_id"`
+	Group          Group             `bson:"group" json:"group"`
+	FullName       string            `bson:"name" json:"name"`
+	AdditionalInfo map[string]string `bson:"additionalInfo" json:"additionalInfo"`
+	Email          string            `json:"email"`
+}
+
+type OrganizationForm struct {
+	ID             string            `json:"_id"`
+	Group          string            `json:"group" validate:"required,min=2,max=24,alpha"`
+	FullName       string            `json:"name" validate:"required, min=2,max=255"`
+	AdditionalInfo map[string]string `json:"additionalInfo"`
+	NewUser        *NewUserForm      `json:"newUser" validate:"omitempty,dive"`
+	Email          *string           `json:"email" validate:"omitempty,email"`
 }
 
 type User struct {
@@ -55,13 +71,14 @@ type UserSetting struct {
 	Lang string `json:"lang"`
 }
 
-type Role uint8
+type Role string
 
 type Group string
 
 const (
-	USER Role = iota + 1
-	ADMIN
+	USER       Role = "USER"
+	ADMIN      Role = "ADMIN"
+	SUPERADMIN Role = "SUPERADMIN"
 )
 
 func (user User) GetID() string {
@@ -70,6 +87,14 @@ func (user User) GetID() string {
 
 func (user *User) SetID(id string) {
 	user.ID = id
+}
+
+func (org Organization) GetID() string {
+	return org.ID
+}
+
+func (org *Organization) SetID(id string) {
+	org.ID = id
 }
 
 func (userActivationURL UserActivationURL) GetID() string {

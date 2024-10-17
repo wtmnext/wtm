@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/a-h/templ"
 	"github.com/golang-jwt/jwt/v5"
@@ -9,6 +10,11 @@ import (
 	"github.com/nbittich/wtm/types"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
+
+func GeneralFormError(c echo.Context, invalidFormError types.InvalidFormError) error {
+	invalidFormError.Messages["general"] = Translate(c.Request().Context(), invalidFormError.Messages["general"].(string))
+	return c.JSON(http.StatusBadRequest, invalidFormError)
+}
 
 func Translate(c context.Context, id string) string {
 	msg := &i18n.Message{ID: id}
