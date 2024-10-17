@@ -1,0 +1,28 @@
+[home]
+title = "Home"
+hello = "Hello"
+world = "World"
+
+[home.signin]
+title = "Sign in"
+invalidCredentials = "Invalid credentials"
+
+[home.signup]
+title = "Sign up"
+emailHelp = "We'll never share your email with anyone else."
+confirmEmail = "Confirm Email"
+confirmPassword = "Confirm Password"
+user.exist = "User already exists"
+user.activated = "User has been successfully activated"
+user.notActivated = "User could not be activated"
+user.created = "User has been created. Check your email for activation"
+[common]
+email = "Email"
+submit = "Submit"
+close = "Close"
+username = "Username"
+password = "Password"
+invalid = "invalid"
+welcome = "Welcome"
+forbidden = "Forbidden"
+logout = "Logout"

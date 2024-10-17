@@ -1,0 +1,9 @@
+bin/**
+tmp/*.log
+test-files/*
+!test-files/sample.csv
+!test-files/server.sh
+views/**/*_templ.go
+.env
+_docker/data
+

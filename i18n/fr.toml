@@ -1,0 +1,28 @@
+[home]
+title = "Accueil"
+hello = "Salut"
+world = "le monde"
+
+[home.signin]
+title = "Se connecter"
+invalidCredentials = "Nom d'utilisateur/Mot de passe incorrect"
+
+[home.signup]
+title = "Créer un compte"
+emailHelp = "Nous ne partagerons jamais votre email."
+confirmEmail = "Confirmer Email"
+confirmPassword = "Confirmer mot de passe"
+user.exist = "Le nom d'utiliasateur existe déjà"
+user.activated = "L'utilisateur a été activé avec succès"
+user.notActivated = "L'utilisateur n'a pas pu être activé"
+user.created = "L'utilisateur a été créé. Vérifiez vos emails pour activer votre compte"
+[common]
+email = "Email"
+submit = "Envoyer"
+close = "Fermer"
+username = "Nom d'utilisateur"
+invalid = "invalide"
+password = "Mot de passe"
+welcome = "Bienvenue"
+forbiddenn = "Accès interdit"
+logout = "Déconnexion"

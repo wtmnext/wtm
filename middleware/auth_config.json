@@ -1,0 +1,17 @@
+[
+  {
+    "pattern": "^$|^\\/$|^\\/assets\\/.*$|^favicon.ico$",
+    "unauthenticated": false,
+    "authenticated": false
+  },
+  {
+    "pattern": "^/users/(new|activate|login)$",
+    "unauthenticated": true,
+    "authenticated": false
+  },
+  {
+    "pattern": "^/users/logout$",
+    "authenticated": true,
+    "unauthenticated": false
+  }
+]
