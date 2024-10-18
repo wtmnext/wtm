@@ -61,7 +61,7 @@ func init() {
 	// cache for the groups
 	groupDatabases = make(map[types.Group]*mongo.Database, len(databases)+len(databases)/2)
 	for _, dbName := range databases {
-		if dbName == config.MongoAdminDBName || slices.Contains(mongoSpecificDB[:], dbName) {
+		if slices.Contains(mongoSpecificDB[:], dbName) {
 			continue
 		}
 		log.Printf("adding group %s", dbName)

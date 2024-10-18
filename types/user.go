@@ -21,6 +21,7 @@ type NewUserForm struct {
 	ConfirmPassword string `json:"confirmPassword" form:"confirmPassword" validate:"eqcsfield=Password"`
 	Email           string `json:"email" form:"email" validate:"required,email"`
 	ConfirmEmail    string `json:"confirmEmail" form:"confirmEmail" validate:"eqcsfield=Email"`
+	Role            *Role  `json:"role" form:"role" validate:"omitempty"`
 }
 
 type Organization struct {
@@ -53,6 +54,7 @@ type User struct {
 }
 
 type UserClaims struct {
+	ID       string      `json:"id"`
 	Username string      `json:"username"`
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`

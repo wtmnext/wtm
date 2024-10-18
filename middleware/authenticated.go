@@ -9,9 +9,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/wtm/services"
+	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/utils"
 	"github.com/nbittich/wtm/types"
 	"github.com/nbittich/wtm/views"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type AuthConfig struct {
@@ -62,11 +64,12 @@ func forbidden(c echo.Context) error {
 
 func ValidateAuth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		user := services.GetUser(c)
 		accept := c.Request().Header.Get(echo.HeaderAccept)
-		if accept != echo.MIMEApplicationJSON {
+		if accept == echo.MIMETextHTML {
 			return forbidden(c)
 		}
+
+		user := services.GetUser(c)
 
 		for _, ac := range authConfigs {
 			if m, _ := regexp.MatchString(ac.Pattern, c.Path()); m {
@@ -76,18 +79,39 @@ func ValidateAuth(next echo.HandlerFunc) echo.HandlerFunc {
 				if ac.Authenticated && user == nil {
 					return forbidden(c)
 				}
-				if ac.Authenticated && len(ac.Roles) > 0 {
-					mapElt := make(map[types.Role]bool, len(user.Roles))
-					for _, r := range user.Roles {
-						mapElt[r] = true
+				if ac.Authenticated {
+					// check user token wasn't forged
+					// fixme maybe add a special hash with a combination of what we have above in db
+					filter := bson.M{
+						"$and": []bson.M{
+							{"username": user.Username},
+							{"group": user.Group},
+							{"_id": user.ID},
+						},
 					}
-					for _, r := range ac.Roles {
-						if !mapElt[r] {
-							return forbidden(c)
-						}
+					collection, err := db.GetCollection(services.UserCollection, user.Group)
+					if err != nil {
+						return forbidden(c)
+					}
+					if exist, err := db.Exist(c.Request().Context(), filter, collection); !exist || err != nil {
+						return forbidden(c)
 					}
 
+					// vaidate roles
+					if len(ac.Roles) > 0 {
+						mapElt := make(map[types.Role]bool, len(user.Roles))
+						for _, r := range user.Roles {
+							mapElt[r] = true
+						}
+						for _, r := range ac.Roles {
+							if !mapElt[r] {
+								return forbidden(c)
+							}
+						}
+
+					}
 				}
+
 			}
 		}
 		return next(c)

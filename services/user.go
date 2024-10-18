@@ -77,6 +77,12 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 		return nil, types.InvalidFormError{Form: newUserForm, Messages: m}
 	}
 
+	roles := make([]types.Role, 0, 2)
+	roles = append(roles, types.USER)
+	if newUserForm.Role != nil {
+		roles = append(roles, *newUserForm.Role)
+	}
+
 	user := &types.User{
 		Username: newUserForm.Username,
 		Password: password,
@@ -85,7 +91,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 		Settings: types.UserSetting{Lang: lang},
 		Profile:  types.UserProfile{},
 		Roles:    []types.Role{types.USER},
-		Group:    "FIXME",
+		Group:    group,
 	}
 
 	go sendActivationEmail(user, true)

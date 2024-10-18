@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -37,6 +38,7 @@ func loginHandler(c echo.Context) error {
 	username := strings.TrimSpace(c.FormValue("username"))
 	password := strings.TrimSpace(c.FormValue("password"))
 	group := types.Group(strings.TrimSpace(c.FormValue("group")))
+	fmt.Printf("login with username %s password %s group %s\n", username, password, group)
 	invalidFormError := types.InvalidFormError{Messages: types.InvalidMessage{"general": "home.signin.invalidCredentials"}}
 	if len(username) == 0 || len(password) == 0 {
 		return handleGeneralFormError(c, invalidFormError)
@@ -50,9 +52,11 @@ func loginHandler(c echo.Context) error {
 	}
 	passwordMatches := services.CheckPasswordHash(password, user.Password)
 	if !passwordMatches {
+		fmt.Println("passwords don't match")
 		return handleGeneralFormError(c, invalidFormError)
 	}
 	userClaims := &types.UserClaims{
+		ID:       user.ID,
 		Username: user.Username,
 		Email:    user.Email,
 		Profile:  user.Profile,

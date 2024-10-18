@@ -43,6 +43,10 @@ func AddOrUpdateOrg(ctx context.Context, form *types.OrganizationForm) (*types.O
 			return org, err
 		}
 		// create a default user
+		if form.NewUser.Role == nil {
+			role := types.ADMIN
+			form.NewUser.Role = &role
+		}
 		if _, err := services.NewUser(ctx, form.NewUser, org.Group); err != nil {
 			return org, err
 		}
