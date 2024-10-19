@@ -13,6 +13,10 @@ import (
 
 var adminOrgCollection = db.GetAdminCollection("organizations")
 
+func ListOrgs(ctx context.Context) ([]types.Organization, error) {
+	return db.FindAll[types.Organization](ctx, adminOrgCollection, nil)
+}
+
 func AddOrUpdateOrg(ctx context.Context, form *types.OrganizationForm) (*types.Organization, error) {
 	if err := utils.ValidateStruct(form); err != nil {
 		return nil, err

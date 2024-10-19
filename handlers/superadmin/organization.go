@@ -13,6 +13,18 @@ import (
 func UserRouter(e *echo.Echo) {
 	superGroup := e.Group("/organizations")
 	superGroup.POST("/", upsertOrgHandler).Name = "superadmin.organizations.Upsert"
+	superGroup.GET("/", listOrgHandler).Name = "superadmin.organizations.List"
+}
+
+func listOrgHandler(c echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	orgs, err := superadmin.ListOrgs(ctx)
+	if err != nil {
+		c.Logger().Errorf("could not list all orgs %s", err.Error())
+		return c.JSON(http.StatusInternalServerError, "internal server error")
+	}
+	return c.JSON(http.StatusOK, orgs)
 }
 
 func upsertOrgHandler(c echo.Context) error {
