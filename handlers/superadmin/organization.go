@@ -10,10 +10,10 @@ import (
 	"github.com/nbittich/wtm/types"
 )
 
-func UserRouter(e *echo.Echo) {
+func SuperAdminRouter(e *echo.Echo) {
 	superGroup := e.Group("/organizations")
-	superGroup.POST("/", upsertOrgHandler).Name = "superadmin.organizations.Upsert"
-	superGroup.GET("/", listOrgHandler).Name = "superadmin.organizations.List"
+	superGroup.POST("", upsertOrgHandler).Name = "superadmin.organizations.Upsert"
+	superGroup.GET("", listOrgHandler).Name = "superadmin.organizations.List"
 }
 
 func listOrgHandler(c echo.Context) error {

@@ -10,9 +10,9 @@ import (
 	"github.com/nbittich/wtm/types"
 )
 
-func UserRouter(e *echo.Echo) {
-	userGroup := e.Group("/admin/users")
-	userGroup.POST("/new", newUserHandler).Name = "admin.users.New"
+func AdminRouter(e *echo.Echo) {
+	adminGroup := e.Group("/admin/users")
+	adminGroup.POST("/new", newUserHandler).Name = "admin.users.New"
 }
 
 func newUserHandler(c echo.Context) error {

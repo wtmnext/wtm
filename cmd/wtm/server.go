@@ -12,6 +12,7 @@ import (
 	"github.com/nbittich/wtm/config"
 	"github.com/nbittich/wtm/handlers"
 	adminHandlers "github.com/nbittich/wtm/handlers/admin"
+	superadminHandlers "github.com/nbittich/wtm/handlers/superadmin"
 	appMidleware "github.com/nbittich/wtm/middleware"
 	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/email"
@@ -59,10 +60,11 @@ func main() {
 	e.Use(middleware.Logger())
 
 	// JWT
+
 	e.Use(echojwt.WithConfig(echojwt.Config{
 		SigningKey: config.JWTSecretKey,
 		// TokenLookup:            fmt.Sprintf("header:Authorization:Bearer ,cookie:%s", config.JWTCookie),
-		TokenLookup:            "header:Authorization:Bearer",
+		TokenLookupFuncs:       []middleware.ValuesExtractor{appMidleware.JWTTokenExtractor},
 		ContinueOnIgnoredError: true,
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(types.UserClaims)
@@ -96,6 +98,7 @@ func main() {
 
 	handlers.UserRouter(e)
 	handlers.HomeRouter(e)
-	adminHandlers.UserRouter(e)
+	adminHandlers.AdminRouter(e)
+	superadminHandlers.SuperAdminRouter(e)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }

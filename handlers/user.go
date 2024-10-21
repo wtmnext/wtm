@@ -62,7 +62,7 @@ func loginHandler(c echo.Context) error {
 		Profile:  user.Profile,
 		Settings: user.Settings,
 		Roles:    user.Roles,
-		Group:    user.Group,
+		Group:    *user.Group,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(config.JWTExpiresAFterMinutes)),
 			Issuer:    config.JWTIssuer,

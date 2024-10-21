@@ -49,7 +49,7 @@ type User struct {
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`
 	Roles    []Role      `json:"roles"`
-	Group    Group       `json:"group"`
+	Group    *Group      `json:"group"`
 	Settings UserSetting `json:"settings"`
 }
 

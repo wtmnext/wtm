@@ -4,8 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/wtm/services"
@@ -32,6 +34,18 @@ func init() {
 	if err := json.Unmarshal(authConfigFile, &authConfigs); err != nil {
 		panic(err)
 	}
+}
+
+func JWTTokenExtractor(c echo.Context) ([]string, error) {
+	tok := c.Request().Header.Get("Authorization")
+	if strings.Contains(tok, "Bearer ") {
+		split := strings.Split(tok, "Bearer ")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("invalid token %s", split)
+		}
+		return []string{split[1]}, nil
+	}
+	return nil, fmt.Errorf("invalid token %s", tok)
 }
 
 func JWTErrorHandler(c echo.Context, err error) error {

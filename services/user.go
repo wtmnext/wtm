@@ -91,7 +91,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 		Settings: types.UserSetting{Lang: lang},
 		Profile:  types.UserProfile{},
 		Roles:    []types.Role{types.USER},
-		Group:    group,
+		Group:    &group,
 	}
 
 	go sendActivationEmail(user, true)
@@ -99,7 +99,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 }
 
 func sendActivationEmail(user *types.User, createUser bool) {
-	collection, err := db.GetCollection(UserCollection, user.Group)
+	collection, err := db.GetCollection(UserCollection, *user.Group)
 	if err != nil {
 		log.Println("could not create user:", err)
 		return
@@ -113,7 +113,7 @@ func sendActivationEmail(user *types.User, createUser bool) {
 			return
 		}
 	}
-	activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID, user.Group)
+	activateURL, e := GenerateActivateURL(ctx, config.BaseURL+"/users/activate", user.ID, *user.Group)
 	if e != nil {
 		log.Println("error while generating validation url", e)
 		return
