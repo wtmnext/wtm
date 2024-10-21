@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var adminOrgCollection = db.GetAdminCollection("organizations")
+var adminOrgCollection = db.GetAdminCollection("organization")
 
 func ListOrgs(ctx context.Context) ([]types.Organization, error) {
 	return db.FindAll[types.Organization](ctx, adminOrgCollection, nil)

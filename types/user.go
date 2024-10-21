@@ -27,7 +27,7 @@ type NewUserForm struct {
 type Organization struct {
 	ID             string            `bson:"_id" json:"_id"`
 	Group          Group             `bson:"group" json:"group"`
-	FullName       string            `bson:"name" json:"name"`
+	FullName       string            `bson:"fullName" json:"fullName"`
 	AdditionalInfo map[string]string `bson:"additionalInfo" json:"additionalInfo"`
 	Email          string            `json:"email"`
 }
@@ -35,7 +35,7 @@ type Organization struct {
 type OrganizationForm struct {
 	ID             string            `json:"_id"`
 	Group          string            `json:"group" validate:"required,min=2,max=24,alpha"`
-	FullName       string            `json:"name" validate:"required, min=2,max=255"`
+	FullName       string            `json:"fullName" validate:"required, min=2,max=255"`
 	AdditionalInfo map[string]string `json:"additionalInfo"`
 	NewUser        *NewUserForm      `json:"newUser" validate:"omitempty,dive"`
 	Email          *string           `json:"email" validate:"omitempty,email"`
