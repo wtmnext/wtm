@@ -33,7 +33,7 @@ var (
 	MongoMaxConnectionPool   = loadIntEnvOrDefault("MONGO_MAX_CONNECTION_POOL", 200)
 	ActivationExpiration     = time.Duration(loadIntEnvOrDefault("ACTIVATION_EXPIRATION", 20)) * time.Minute
 	JWTSecretKey             = []byte(loadEnvOrDefault("JWT_SECRET_KEY", "secret"))
-	JWTExpiresAFterMinutes   = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 5)) * time.Minute
+	JWTExpiresAFterMinutes   = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 30)) * time.Minute
 	JWTIssuer                = loadEnvOrDefault("JWT_ISSUER", "WorkingTimeManagement")
 	// JWTCookie                = loadEnvOrDefault("JWT_COOKIE", "jwt")
 	TempDir         = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
