@@ -52,7 +52,10 @@ func JWTErrorHandler(c echo.Context, err error) error {
 	for _, ac := range authConfigs {
 		if m, _ := regexp.MatchString(ac.Pattern, c.Path()); m {
 			if ac.Authenticated {
-				return err
+				c.Logger().Warnf("login error %s", err.Error())
+				e := echo.ErrUnauthorized
+				e.SetInternal(err)
+				return e
 			}
 		}
 	}
