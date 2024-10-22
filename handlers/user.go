@@ -38,13 +38,13 @@ func loginHandler(c echo.Context) error {
 	username := strings.TrimSpace(c.FormValue("username"))
 	password := strings.TrimSpace(c.FormValue("password"))
 	group := types.Group(strings.TrimSpace(c.FormValue("group")))
-	fmt.Printf("login with username %s password %s group %s\n", username, password, group)
 	invalidFormError := types.InvalidFormError{Messages: types.InvalidMessage{"general": "home.signin.invalidCredentials"}}
 	if len(username) == 0 || len(password) == 0 {
 		return handleGeneralFormError(c, invalidFormError)
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
+
 	user, error := services.FindByUsernameOrEmail(ctx, username, group)
 
 	if error != nil || !user.Enabled {

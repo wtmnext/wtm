@@ -36,7 +36,7 @@ func upsertOrgHandler(c echo.Context) error {
 	c.Logger().Debug(orgForm)
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	user, err := superadmin.AddOrUpdateOrg(ctx, &orgForm)
+	org, err := superadmin.AddOrUpdateOrg(ctx, &orgForm)
 	if err != nil {
 		if err, ok := err.(types.InvalidFormError); ok {
 			err.Form = orgForm
@@ -45,7 +45,7 @@ func upsertOrgHandler(c echo.Context) error {
 		c.Logger().Error("Unexpected error when creating a new organization:", err.Error())
 		return echo.NewHTTPError(http.StatusInternalServerError, "unexpected error while creating new organization")
 	}
-	c.Logger().Debug(user)
+	c.Logger().Debug(org)
 
-	return c.JSON(http.StatusOK, user)
+	return c.JSON(http.StatusOK, org)
 }

@@ -15,6 +15,37 @@ type UserActivationURL struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
+type Organization struct {
+	ID             string           `bson:"_id" json:"_id"`
+	Group          Group            `bson:"group" json:"group"`
+	FullName       string           `bson:"fullName" json:"fullName"`
+	AdditionalInfo []AdditionalInfo `bson:"additionalInfo" json:"additionalInfo"`
+	Email          string           `json:"email"`
+}
+
+type OrganizationForm struct {
+	ID             string           `json:"_id"`
+	Group          string           `json:"group" validate:"required,min=2,max=24,alpha"`
+	FullName       string           `json:"fullName" validate:"required,min=2,max=255"`
+	AdditionalInfo []AdditionalInfo `json:"additionalInfo" validate:"omitempty"`
+	NewUser        *NewUserForm     `json:"newUser" validate:"omitempty"`
+	Email          *string          `json:"email" validate:"omitempty,email"`
+}
+
+type AdditionalInfo struct {
+	Key   string `json:"key" validate:"required,min=2"`
+	Value string `json:"value" validate:"required,min=2"`
+}
+type Role string
+
+type Group string
+
+const (
+	USER       Role = "USER"
+	ADMIN      Role = "ADMIN"
+	SUPERADMIN Role = "SUPERADMIN"
+)
+
 type NewUserForm struct {
 	Username        string `json:"username" form:"username" validate:"required,min=3,max=15,alphanum,startswithalpha"`
 	Password        string `json:"password" form:"password" validate:"required,min=6,max=18,password"`
@@ -23,24 +54,6 @@ type NewUserForm struct {
 	ConfirmEmail    string `json:"confirmEmail" form:"confirmEmail" validate:"eqcsfield=Email"`
 	Role            *Role  `json:"role" form:"role" validate:"omitempty"`
 }
-
-type Organization struct {
-	ID             string            `bson:"_id" json:"_id"`
-	Group          Group             `bson:"group" json:"group"`
-	FullName       string            `bson:"fullName" json:"fullName"`
-	AdditionalInfo map[string]string `bson:"additionalInfo" json:"additionalInfo"`
-	Email          string            `json:"email"`
-}
-
-type OrganizationForm struct {
-	ID             string            `json:"_id"`
-	Group          string            `json:"group" validate:"required,min=2,max=24,alpha"`
-	FullName       string            `json:"fullName" validate:"required, min=2,max=255"`
-	AdditionalInfo map[string]string `json:"additionalInfo"`
-	NewUser        *NewUserForm      `json:"newUser" validate:"omitempty,dive"`
-	Email          *string           `json:"email" validate:"omitempty,email"`
-}
-
 type User struct {
 	ID       string      `bson:"_id" json:"_id"`
 	Username string      `json:"username"`
@@ -72,16 +85,6 @@ type UserProfile struct {
 type UserSetting struct {
 	Lang string `json:"lang"`
 }
-
-type Role string
-
-type Group string
-
-const (
-	USER       Role = "USER"
-	ADMIN      Role = "ADMIN"
-	SUPERADMIN Role = "SUPERADMIN"
-)
 
 func (user User) GetID() string {
 	return user.ID

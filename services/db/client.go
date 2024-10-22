@@ -117,7 +117,9 @@ func Exist(ctx context.Context, filter bson.M, collection *mongo.Collection) (bo
 
 func FindOneBy[T types.HasID](ctx context.Context, filter bson.M, collection *mongo.Collection) (T, error) {
 	ptr := new(T)
+
 	res := collection.FindOne(ctx, filter, &options.FindOneOptions{})
+
 	err := res.Decode(ptr)
 	return *ptr, err
 }
