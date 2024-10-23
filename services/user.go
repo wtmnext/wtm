@@ -79,7 +79,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 
 	var roles []types.Role
 	if newUserForm.Role != nil && *newUserForm.Role != types.USER {
-		roles = make([]types.Role, 2)
+		roles = make([]types.Role, 0, 2)
 		roles = append(roles, types.USER)
 		roles = append(roles, *newUserForm.Role)
 	} else {
