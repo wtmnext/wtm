@@ -77,10 +77,13 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 		return nil, types.InvalidFormError{Form: newUserForm, Messages: m}
 	}
 
-	roles := make([]types.Role, 0, 2)
-	roles = append(roles, types.USER)
-	if newUserForm.Role != nil {
+	var roles []types.Role
+	if newUserForm.Role != nil && *newUserForm.Role != types.USER {
+		roles = make([]types.Role, 2)
+		roles = append(roles, types.USER)
 		roles = append(roles, *newUserForm.Role)
+	} else {
+		roles = []types.Role{types.USER}
 	}
 
 	user := &types.User{
@@ -90,7 +93,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 		Enabled:  false,
 		Settings: types.UserSetting{Lang: lang},
 		Profile:  types.UserProfile{},
-		Roles:    []types.Role{types.USER},
+		Roles:    roles,
 		Group:    &group,
 	}
 
