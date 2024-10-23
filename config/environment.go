@@ -35,9 +35,10 @@ var (
 	JWTSecretKey             = []byte(loadEnvOrDefault("JWT_SECRET_KEY", "secret"))
 	JWTExpiresAFterMinutes   = time.Duration(loadIntEnvOrDefault("JWT_EXPIRES_AFTER_MINUTES", 30)) * time.Minute
 	JWTIssuer                = loadEnvOrDefault("JWT_ISSUER", "WorkingTimeManagement")
-	// JWTCookie                = loadEnvOrDefault("JWT_COOKIE", "jwt")
-	TempDir         = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
-	StaticDirectory = loadEnvOrDefault("STATIC_DIRECTORY", fmt.Sprint(os.TempDir(), "/wtm/static"))
+	DefaultBCryptCost        = loadIntEnvOrDefault("DEFAULT_BCRYPT_COST", 10)
+	TempDir                  = loadEnvOrDefault("TMP_DIRECTORY", os.TempDir())
+	StaticDirectory          = loadEnvOrDefault("STATIC_DIRECTORY", fmt.Sprint(os.TempDir(), "/wtm/static"))
+	// JWTCookie             = loadEnvOrDefault("JWT_COOKIE", "jwt")
 )
 
 type EnvType uint8
