@@ -34,13 +34,21 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func GetUser(c echo.Context) *types.UserClaims {
+func GetUser(c echo.Context) (*types.UserClaims, error) {
 	if tok, ok := c.Get("user").(*jwt.Token); ok {
 		if user, ok := tok.Claims.(*types.UserClaims); ok {
-			return user
+			return user, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("user could not be extracted from token")
+}
+
+func AllUsers(ctx context.Context, group types.Group, page *db.PageOptions) ([]types.User, error) {
+	collection, err := db.GetCollection(UserCollection, group)
+	if err != nil {
+		return nil, err
+	}
+	return db.FindAll[types.User](ctx, collection, page)
 }
 
 func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Group) (*types.User, error) {
@@ -88,7 +96,7 @@ func NewUser(ctx context.Context, newUserForm *types.NewUserForm, group types.Gr
 
 	user := &types.User{
 		Username: newUserForm.Username,
-		Password: password,
+		Password: &password,
 		Email:    newUserForm.Email,
 		Enabled:  false,
 		Settings: types.UserSetting{Lang: lang},

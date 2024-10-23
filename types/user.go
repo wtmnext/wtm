@@ -57,7 +57,7 @@ type NewUserForm struct {
 type User struct {
 	ID       string      `bson:"_id" json:"_id"`
 	Username string      `json:"username"`
-	Password string      `json:"password"`
+	Password *string     `json:"password"`
 	Enabled  bool        `json:"enabled"`
 	Email    string      `json:"email"`
 	Profile  UserProfile `json:"profile"`

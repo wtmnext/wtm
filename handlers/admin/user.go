@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -13,12 +14,31 @@ import (
 func AdminRouter(e *echo.Echo) {
 	adminGroup := e.Group("/admin/users")
 	adminGroup.POST("/new", newUserHandler).Name = "admin.users.New"
+	adminGroup.GET("", listUserHandler).Name = "admin.users.List"
+}
+
+func listUserHandler(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	users, err := services.AllUsers(ctx, adminUser.Group, nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, users)
 }
 
 func newUserHandler(c echo.Context) error {
-	adminUser := services.GetUser(c)
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+
 	newUserForm := types.NewUserForm{}
-	if err := c.Bind(&newUserForm); err != nil {
+	if err = c.Bind(&newUserForm); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 

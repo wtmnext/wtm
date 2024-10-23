@@ -86,7 +86,7 @@ func ValidateAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			return forbidden(c)
 		}
 
-		user := services.GetUser(c)
+		user, _ := services.GetUser(c)
 
 		for _, ac := range authConfigs {
 			if m, _ := regexp.MatchString(ac.Pattern, c.Path()); m {

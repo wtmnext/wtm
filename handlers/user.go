@@ -50,7 +50,7 @@ func loginHandler(c echo.Context) error {
 	if error != nil || !user.Enabled {
 		return handleGeneralFormError(c, invalidFormError)
 	}
-	passwordMatches := services.CheckPasswordHash(password, user.Password)
+	passwordMatches := services.CheckPasswordHash(password, *user.Password)
 	if !passwordMatches {
 		fmt.Println("passwords don't match")
 		return handleGeneralFormError(c, invalidFormError)
