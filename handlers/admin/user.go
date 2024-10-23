@@ -28,6 +28,7 @@ func listUserHandler(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	return c.JSON(http.StatusOK, users)
 }
 
