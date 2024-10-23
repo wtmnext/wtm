@@ -1,6 +1,9 @@
 MAIN=cmd/wtm/server.go
 P=bin/wtm
 FLAGS=-ldflags="-s -w"
+
+fmt:
+	@go fmt ./...
 tpl:
 	@templ generate
 build: tpl
