@@ -174,6 +174,13 @@ func FindAll[T types.HasID](ctx context.Context, collection *mongo.Collection, p
 	return Find[T](ctx, &bson.D{}, collection, page)
 }
 
+func FindAllByIDs[T types.HasID](ctx context.Context, collection *mongo.Collection, ids []string, page *PageOptions) ([]T, error) {
+	filter := &bson.M{
+		"_id": &bson.M{"$in": ids},
+	}
+	return Find[T](ctx, filter, collection, page)
+}
+
 func FindOneByID[T types.HasID](ctx context.Context, collection *mongo.Collection, id string) (T, error) {
 	return FindOneBy[T](ctx, FilterByID(id), collection)
 }

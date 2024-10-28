@@ -129,7 +129,23 @@ func sendActivationEmail(user *types.User, createUser bool) {
 		log.Println("error while generating validation url", e)
 		return
 	}
-	email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
+	go email.SendAsync([]string{user.Email}, []string{}, "Activate your account", fmt.Sprintf(`<a href="%s">Activate your account now!</p>`, activateURL))
+}
+
+func FindUserByID(ctx context.Context, id string, group types.Group) (types.User, error) {
+	userCollection, err := db.GetCollection(UserCollection, group)
+	if err != nil {
+		return types.User{}, err
+	}
+	return db.FindOneByID[types.User](ctx, userCollection, id)
+}
+
+func FindAllUsersByIDs(ctx context.Context, ids []string, group types.Group) ([]types.User, error) {
+	userCollection, err := db.GetCollection(UserCollection, group)
+	if err != nil {
+		return nil, err
+	}
+	return db.FindAllByIDs[types.User](ctx, userCollection, ids, nil)
 }
 
 func FindByUsernameOrEmail(ctx context.Context, username string, group types.Group) (types.User, error) {
