@@ -18,7 +18,7 @@ import (
 const (
 	PlanningCollection           = "planning"
 	ProjectCollection            = "project"
-	PlanningAssignmentCollection = "lanningAssignment"
+	PlanningAssignmentCollection = "planningAssignment"
 )
 
 func UpdateOrEditPlanningEntry(ctx context.Context, entry *types.PlanningEntry, group types.Group) (*types.PlanningEntry, error) {
