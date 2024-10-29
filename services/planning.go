@@ -22,7 +22,7 @@ const (
 )
 
 func GetProjects(ctx context.Context, group types.Group) ([]types.Project, error) {
-	collection, err := db.GetCollection(PlanningCollection, group)
+	collection, err := db.GetCollection(ProjectCollection, group)
 	if err != nil {
 		return nil, err
 	}
