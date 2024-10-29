@@ -98,7 +98,8 @@ func main() {
 
 	handlers.UserRouter(e)
 	handlers.HomeRouter(e)
-	adminHandlers.AdminRouter(e)
+	adminHandlers.AdminUserRouter(e)
+	adminHandlers.AdminPlanningRouter(e)
 	superadminHandlers.SuperAdminRouter(e)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }

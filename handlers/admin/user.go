@@ -11,7 +11,7 @@ import (
 	"github.com/nbittich/wtm/types"
 )
 
-func AdminRouter(e *echo.Echo) {
+func AdminUserRouter(e *echo.Echo) {
 	adminGroup := e.Group("/admin/users")
 	adminGroup.POST("/new", newUserHandler).Name = "admin.users.New"
 	adminGroup.GET("", listUserHandler).Name = "admin.users.List"

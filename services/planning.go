@@ -21,7 +21,46 @@ const (
 	PlanningAssignmentCollection = "planningAssignment"
 )
 
-func UpdateOrEditPlanningEntry(ctx context.Context, entry *types.PlanningEntry, group types.Group) (*types.PlanningEntry, error) {
+func GetProjects(ctx context.Context, group types.Group) ([]types.Project, error) {
+	collection, err := db.GetCollection(PlanningCollection, group)
+	if err != nil {
+		return nil, err
+	}
+	return db.FindAll[types.Project](ctx, collection, nil)
+}
+
+func GetPlanning(ctx context.Context, projectID string, group types.Group) ([]types.PlanningEntry, error) {
+	collection, err := db.GetCollection(PlanningCollection, group)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{
+		"projectId": projectID,
+	}
+	return db.Find[types.PlanningEntry](ctx, &filter, collection, nil)
+}
+
+func AddOrUpdateProject(ctx context.Context, project *types.Project, group types.Group) (*types.Project, error) {
+	if err := utils.ValidateStruct(project); err != nil {
+		return nil, err
+	}
+	projectCollection, err := db.GetCollection(ProjectCollection, group)
+	if err != nil {
+		return nil, err
+	}
+	if project.ID != "" {
+		project.UpdatedAt = time.Now()
+	} else {
+		project.CreatedAt = time.Now()
+	}
+	if _, err = db.InsertOrUpdate(ctx, project, projectCollection); err != nil {
+		return nil, err
+	}
+	return project, nil
+}
+
+func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, group types.Group) (*types.PlanningEntry, error) {
 	if err := utils.ValidateStruct(entry); err != nil {
 		return nil, err
 	}

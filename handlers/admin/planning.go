@@ -1,0 +1,86 @@
+package admin
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+	"github.com/nbittich/wtm/config"
+	"github.com/nbittich/wtm/services"
+	"github.com/nbittich/wtm/types"
+)
+
+func AdminPlanningRouter(e *echo.Echo) {
+	projectsGroup := e.Group("/admin/projects")
+	projectsGroup.POST(":id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
+	projectsGroup.GET(":id/planning", getPlanning).Name = "admin.planning.Get"
+	projectsGroup.POST("", upsertProject).Name = "admin.planning.UpsertProject"
+	projectsGroup.GET("", listProjects).Name = "admin.project.ListProject"
+}
+
+func upsertPlanningEntry(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	planningEntry := types.PlanningEntry{}
+	if err := c.Bind(&planningEntry); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	if _, err := services.AddOrUpdatePlanningEntry(ctx, &planningEntry, adminUser.Group); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, planningEntry)
+}
+
+func upsertProject(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+
+	project := types.Project{}
+	if err := c.Bind(&project); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	if _, err := services.AddOrUpdateProject(ctx, &project, adminUser.Group); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, project)
+}
+
+func listProjects(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	projects, err := services.GetProjects(ctx, adminUser.Group)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, projects)
+}
+
+func getPlanning(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	projectID := c.Param("id")
+	planning, err := services.GetPlanning(ctx, projectID, adminUser.Group)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, planning)
+}
