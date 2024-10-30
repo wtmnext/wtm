@@ -3,13 +3,23 @@ package types
 import "time"
 
 type Project struct {
-	ID          string    `bson:"_id" json:"_id"`
-	Name        string    `bson:"projectName" json:"projectName" validate:"required"`
-	Description *string   `bson:"description,omitempty" json:"description"`
-	CreatedAt   time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt   time.Time `bson:"updatedAt,omitempty" json:"updatedAt,omitempty"`
-	Archived    bool      `bson:"archived" json:"archived"`
+	ID          string      `bson:"_id" json:"_id"`
+	Name        string      `bson:"projectName" json:"projectName" validate:"required"`
+	Description *string     `bson:"description,omitempty" json:"description"`
+	CreatedAt   time.Time   `bson:"createdAt" json:"createdAt"`
+	UpdatedAt   time.Time   `bson:"updatedAt,omitempty" json:"updatedAt,omitempty"`
+	Archived    bool        `bson:"archived" json:"archived"`
+	Type        ProjectType `bson:"projectType" json:"projectType" validate:"required"`
 }
+
+type ProjectType string
+
+const (
+	Work     ProjectType = "WORK"
+	Holidays ProjectType = "HOLIDAYS"
+	Sickness ProjectType = "SICKNESS"
+	Absence  ProjectType = "ABSENCE"
+)
 
 type PlanningEntry struct {
 	ID                      string    `bson:"_id" json:"_id"`

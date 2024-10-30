@@ -11,10 +11,11 @@ import (
 	"github.com/nbittich/wtm/types"
 )
 
-func AdminPlanningRouter(e *echo.Echo) {
+func AdminProjectRouter(e *echo.Echo) {
 	projectsGroup := e.Group("/admin/projects")
 	projectsGroup.POST(":id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
 	projectsGroup.GET(":id/planning", getPlanning).Name = "admin.planning.Get"
+	projectsGroup.GET("/:id", getProject).Name = "admin.project.Get"
 	projectsGroup.POST("", upsertProject).Name = "admin.planning.UpsertProject"
 	projectsGroup.GET("", listProjects).Name = "admin.project.ListProject"
 }
@@ -83,4 +84,19 @@ func getPlanning(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, planning)
+}
+
+func getProject(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	projectID := c.Param("id")
+	project, err := services.GetProject(ctx, projectID, adminUser.Group)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, project)
 }

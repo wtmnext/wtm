@@ -29,6 +29,19 @@ func GetProjects(ctx context.Context, group types.Group) ([]types.Project, error
 	return db.FindAll[types.Project](ctx, collection, nil)
 }
 
+func GetProject(ctx context.Context, projectID string, group types.Group) (*types.Project, error) {
+	collection, err := db.GetCollection(ProjectCollection, group)
+	if err != nil {
+		return nil, err
+	}
+
+	project, err := db.FindOneByID[types.Project](ctx, collection, projectID)
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
 func GetPlanning(ctx context.Context, projectID string, group types.Group) ([]types.PlanningEntry, error) {
 	collection, err := db.GetCollection(PlanningCollection, group)
 	if err != nil {
