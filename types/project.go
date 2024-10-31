@@ -22,17 +22,17 @@ const (
 )
 
 type PlanningEntry struct {
-	ID                      string    `bson:"_id" json:"_id"`
-	ProjectID               string    `bson:"projectId" json:"projectId" validate:"required"`
-	CreatedAt               time.Time `bson:"createdAt" json:"createdAt"`
-	UpdatedAt               time.Time `bson:"updatedAt,omitempty" json:"updatedAt,omitempty"`
-	Start                   time.Time `bson:"start" json:"start" validate:"required"`
-	End                     time.Time `bson:"end" json:"end" validate:"required"`
-	EmployeeIDs             []string  `bson:"employeeIds, omitempty" json:"employeeIds"`
-	AllowMultipleAssignment bool      `bson:"multipleAssignment" json:"multipleAssignment"`
-	Title                   string    `bson:"title" json:"title" validate:"required"`
-	Description             *string   `bson:"description,omitempty" json:"description"`
-	Comments                []Comment `bson:"comments" json:"comments"`
+	ID                      string     `bson:"_id" json:"_id"`
+	ProjectID               string     `bson:"projectId" json:"projectId" validate:"required"`
+	CreatedAt               time.Time  `bson:"createdAt" json:"createdAt"`
+	UpdatedAt               *time.Time `bson:"updatedAt,omitempty" json:"updatedAt,omitempty"`
+	Start                   time.Time  `bson:"start" json:"start" validate:"required"`
+	End                     time.Time  `bson:"end" json:"end" validate:"required"`
+	EmployeeIDs             []string   `bson:"employeeIds, omitempty" json:"employeeIds"`
+	AllowMultipleAssignment bool       `bson:"multipleAssignment" json:"multipleAssignment"`
+	Title                   string     `bson:"title" json:"title" validate:"required"`
+	Description             *string    `bson:"description,omitempty" json:"description"`
+	Comments                []Comment  `bson:"comments" json:"comments"`
 }
 
 type PlanningAssignment struct {

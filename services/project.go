@@ -109,10 +109,11 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, g
 	if project.Archived {
 		return nil, fmt.Errorf("cannot create new planning entry on archived project")
 	}
+	now := time.Now()
 	if entry.ID == "" {
-		entry.CreatedAt = time.Now()
+		entry.CreatedAt = now
 	} else {
-		entry.UpdatedAt = time.Now()
+		entry.UpdatedAt = &now
 	}
 
 	planningCollection, err := db.GetCollection(PlanningCollection, group)
