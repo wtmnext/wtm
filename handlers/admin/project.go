@@ -13,8 +13,8 @@ import (
 
 func AdminProjectRouter(e *echo.Echo) {
 	projectsGroup := e.Group("/admin/projects")
-	projectsGroup.POST(":id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
-	projectsGroup.GET(":id/planning", getPlanning).Name = "admin.planning.Get"
+	projectsGroup.POST("/:id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
+	projectsGroup.GET("/:id/planning", getPlanning).Name = "admin.planning.Get"
 	projectsGroup.GET("/:id", getProject).Name = "admin.project.Get"
 	projectsGroup.POST("", upsertProject).Name = "admin.planning.UpsertProject"
 	projectsGroup.GET("", listProjects).Name = "admin.project.ListProject"
