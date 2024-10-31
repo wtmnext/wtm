@@ -13,6 +13,7 @@ import (
 	"github.com/nbittich/wtm/handlers"
 	adminHandlers "github.com/nbittich/wtm/handlers/admin"
 	superadminHandlers "github.com/nbittich/wtm/handlers/superadmin"
+	userHandlers "github.com/nbittich/wtm/handlers/user"
 	appMidleware "github.com/nbittich/wtm/middleware"
 	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/email"
@@ -100,6 +101,7 @@ func main() {
 	handlers.HomeRouter(e)
 	adminHandlers.AdminUserRouter(e)
 	adminHandlers.AdminProjectRouter(e)
+	userHandlers.UserPlanningRoute(e)
 	superadminHandlers.SuperAdminRouter(e)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", config.Host, config.Port)))
 }

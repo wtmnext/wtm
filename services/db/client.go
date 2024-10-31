@@ -191,6 +191,15 @@ func Save[T types.Identifiable](entity T, col *mongo.Collection) (string, error)
 	return InsertOrUpdate(ctx, entity, col)
 }
 
+func Aggregate[T types.HasID](ctx context.Context, col *mongo.Collection, pipeline mongo.Pipeline) ([]T, error) {
+	resultSize := 100
+	cursor, err := col.Aggregate(ctx, pipeline, &options.AggregateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return CursorToSlice[T](ctx, cursor, resultSize)
+}
+
 func InsertOrUpdateMany(ctx context.Context, entities []types.Identifiable, collection *mongo.Collection) error {
 	models := make([]mongo.WriteModel, 0, len(entities))
 	for _, entity := range entities {

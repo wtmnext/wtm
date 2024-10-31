@@ -13,6 +13,7 @@ import (
 	"github.com/nbittich/wtm/services/utils"
 	"github.com/nbittich/wtm/types"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -20,6 +21,43 @@ const (
 	ProjectCollection            = "project"
 	PlanningAssignmentCollection = "planningAssignment"
 )
+
+func GetPlanningAssignments(ctx context.Context, employeeID string, group types.Group) ([]types.PlanningAssignmentDetail, error) {
+	collection, err := db.GetCollection(PlanningAssignmentCollection, group)
+	if err != nil {
+		return nil, err
+	}
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"employeeId": employeeID}}},
+		{{Key: "$lookup", Value: bson.M{
+			"from":         PlanningCollection,
+			"localField":   "entryId",
+			"foreignField": "_id",
+			"as":           "entry",
+		}}},
+		{{Key: "$unwind", Value: bson.M{
+			"path":                       "$entry",
+			"preserveNullAndEmptyArrays": false,
+		}}},
+		{{Key: "$addFields", Value: bson.M{
+			"entry": "$entry",
+		}}},
+		{{Key: "$lookup", Value: bson.M{
+			"from":         ProjectCollection,
+			"localField":   "entry.projectId",
+			"foreignField": "_id",
+			"as":           "project",
+		}}},
+		{{Key: "$unwind", Value: bson.M{
+			"path":                       "$project",
+			"preserveNullAndEmptyArrays": true,
+		}}},
+		{{Key: "$addFields", Value: bson.M{
+			"project": "$project",
+		}}},
+	}
+	return db.Aggregate[types.PlanningAssignmentDetail](ctx, collection, pipeline)
+}
 
 func GetProjects(ctx context.Context, group types.Group) ([]types.Project, error) {
 	collection, err := db.GetCollection(ProjectCollection, group)
@@ -129,7 +167,7 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, g
 }
 
 func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.User, project types.Project, group types.Group) {
-	collection, err := db.GetCollection(PlanningCollection, group)
+	assignmentCol, err := db.GetCollection(PlanningAssignmentCollection, group)
 	if len(users) == 0 {
 		return
 	}
@@ -143,7 +181,7 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), config.MongoCtxTimeout)
 	defer cancel()
-	existingAssignements, err := db.Find[types.PlanningAssignment](ctx, filter, collection, nil)
+	existingAssignements, err := db.Find[types.PlanningAssignment](ctx, filter, assignmentCol, nil)
 	if err != nil {
 		log.Println("could not fetch existing assignments", err)
 		return
@@ -179,7 +217,7 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 			})
 		}
 	}
-	if err = db.InsertOrUpdateMany(ctx, assignmentsToUpdate, collection); err != nil {
+	if err = db.InsertOrUpdateMany(ctx, assignmentsToUpdate, assignmentCol); err != nil {
 		log.Println("Could not update assignments", err)
 		return
 	}

@@ -45,6 +45,16 @@ type PlanningAssignment struct {
 	Cancelled  bool      `bson:"cancelled" json:"cancelled"`
 }
 
+type PlanningAssignmentDetail struct {
+	PlanningAssignment `bson:",inline"`
+	Entry              *PlanningEntry `bson:"entry" json:"entry,omitempty"`
+	Project            *Project       `bson:"project" json:"project,omitempty"`
+}
+
+func (entry PlanningAssignmentDetail) GetID() string {
+	return entry.ID
+}
+
 func (entry PlanningAssignment) GetID() string {
 	return entry.ID
 }

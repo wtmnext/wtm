@@ -18,6 +18,14 @@
     ]
   },
   {
+    "pattern": "^/planning/?.*",
+    "unauthenticated": false,
+    "authenticated": true,
+    "roles": [
+      "USER"
+    ]
+  },
+  {
     "pattern": "^/organizations/?.*",
     "unauthenticated": false,
     "authenticated": true,
