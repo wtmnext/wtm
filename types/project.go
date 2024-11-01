@@ -45,6 +45,35 @@ type PlanningAssignment struct {
 	Cancelled  bool      `bson:"cancelled" json:"cancelled"`
 }
 
+type (
+	PlanningCycle struct {
+		ProjectID               string                `json:"projectId" validate:"required"`
+		Start                   string                `json:"start" validate:"required"`
+		End                     string                `json:"end" validate:"required"`
+		EmployeeIDs             []string              `json:"employeeIds"`
+		AllowMultipleAssignment bool                  `json:"multipleAssignment"`
+		Title                   string                `json:"title" validate:"required"`
+		Description             *string               `json:"description"`
+		RotationFrequency       uint16                `json:"rotationFrequency" validate:"required,min=1"`
+		RotationFrequencyType   RotationFrequencyType `json:"rotationFrequencyType" validate:"required"`
+		Shifts                  []Shift               `json:"shifts" validate:"required,min=1"`
+		IncludeSaturday         bool                  `json:"includeSaturday"`
+		IncludeSunday           bool                  `json:"includeSunday"`
+	}
+	Shift struct {
+		StartHour   int `json:"startHour" validate:"required,min=0,max=23"`
+		StartMinute int `json:"startMinute" validate:"required,min=0,max=59"`
+		EndHour     int `json:"endHour" validate:"required,min=0,max=23"`
+		EndMinute   int `json:"endMinute" validate:"required,min=0,max=59"`
+	}
+	RotationFrequencyType = string
+)
+
+const (
+	Days  RotationFrequencyType = "DAYS"
+	Weeks RotationFrequencyType = "WEEKS"
+)
+
 type PlanningAssignmentDetail struct {
 	PlanningAssignment `bson:",inline"`
 	Entry              *PlanningEntry `bson:"entry" json:"entry,omitempty"`

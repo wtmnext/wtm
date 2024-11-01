@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/nbittich/wtm/config"
@@ -164,6 +165,133 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, g
 	go assignOrUnassignPlanningEntry(entry, users, project, group)
 
 	return entry, nil
+}
+
+func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group types.Group) ([]types.PlanningEntry, error) {
+	if err := utils.ValidateStruct(cycle); err != nil {
+		return nil, err
+	}
+	var users []types.User
+	var err error
+	if len(cycle.EmployeeIDs) != 0 {
+
+		if len(cycle.EmployeeIDs) > 1 && !cycle.AllowMultipleAssignment {
+			return nil, fmt.Errorf("multiple assignment is not allowed for this entry")
+		}
+		users, err = FindAllUsersByIDs(ctx, cycle.EmployeeIDs, group)
+		if err != nil {
+			return nil, err
+		}
+		if len(users) != len(cycle.EmployeeIDs) {
+			return nil, fmt.Errorf("could not retrieve all employees")
+		}
+		for _, user := range users {
+			if !user.Enabled || !slices.Contains(user.Roles, types.USER) {
+				return nil, fmt.Errorf("user is not enabled or doesn't have the proper role")
+			}
+		}
+	}
+	startDay, err := time.Parse("02/01/2006", cycle.Start)
+	if err != nil {
+		return nil, err
+	}
+	endDay, err := time.Parse("02/01/2006", cycle.End)
+	if err != nil {
+		return nil, err
+	}
+	if startDay.After(endDay) {
+		return nil, fmt.Errorf("start day cannot be after end day")
+	}
+
+	entry := &types.PlanningEntry{
+		ProjectID:               cycle.ProjectID,
+		EmployeeIDs:             cycle.EmployeeIDs,
+		AllowMultipleAssignment: cycle.AllowMultipleAssignment,
+		Title:                   cycle.Title,
+		Description:             cycle.Description,
+		Comments:                []types.Comment{},
+	}
+
+	dates := make([]time.Time, 0, 10)
+
+	for d := startDay; !d.After(endDay); d.AddDate(0, 0, 1) {
+		weekDay := d.Weekday()
+		if (weekDay == time.Saturday && !cycle.IncludeSaturday) || (weekDay == time.Sunday && !cycle.IncludeSunday) {
+			continue
+		}
+		dates = append(dates, d)
+	}
+	var frequency int
+	switch cycle.RotationFrequencyType {
+	case types.Days:
+		frequency = int(cycle.RotationFrequency)
+	case types.Weeks:
+		frequency = int(cycle.RotationFrequency) * 7
+	default:
+		return nil, fmt.Errorf("unknown rotation frequency type")
+	}
+	shiftIndex := -1 // we want to start at 0
+	var wg sync.WaitGroup
+
+	ch := make(chan types.PlanningEntry, 2)
+	errCh := make(chan error, 1)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	for idx, date := range dates {
+		if idx%frequency == 0 {
+			// new cycle
+			shiftIndex += 1
+			if shiftIndex == len(cycle.Shifts) {
+				// reset shiftIndex
+				shiftIndex = 0
+			}
+		}
+		shift := cycle.Shifts[shiftIndex]
+		start := time.Date(date.Year(), date.Month(), date.Day(), shift.StartHour, shift.StartMinute, 0, 0, date.Location())
+		end := time.Date(date.Year(), date.Month(), date.Day(), shift.EndHour, shift.EndMinute, 0, 0, date.Location())
+		entry.ID = ""
+		entry.Start = start
+		entry.End = end
+		wg.Add(1)
+		go func(ctx context.Context, wg *sync.WaitGroup, ch chan<- types.PlanningEntry, errCh chan<- error, entry types.PlanningEntry, group types.Group) {
+			defer wg.Done()
+			entry.CreatedAt = time.Now()
+			_, err := AddOrUpdatePlanningEntry(ctx, &entry, group)
+			if err != nil {
+				errCh <- err
+			} else {
+				ch <- entry
+			}
+		}(ctx, &wg, ch, errCh, *entry, group)
+
+	}
+	go func() {
+		wg.Wait()
+		close(ch)
+		close(errCh)
+	}()
+
+	entries := make([]types.PlanningEntry, 0, len(dates))
+
+	var errored error = nil
+	for {
+		select {
+		case err, ok := <-errCh:
+			if ok {
+				errored = err
+				cancel()
+			}
+		case entry, ok := <-ch:
+			if ok {
+				entries = append(entries, entry)
+			}
+
+		}
+		if errCh == nil && ch == nil {
+			break
+		}
+	}
+	return entries, errored
 }
 
 func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.User, project types.Project, group types.Group) {
