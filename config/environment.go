@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	TZ                       = loadEnvOrDefault("TZ", "Europe/Brussels")
 	Host                     = loadEnvOrDefault("HOST", "0.0.0.0")
 	HostName                 = loadEnvOrDefault("HOSTNAME", "localhost")
 	Port                     = loadEnvOrDefault("PORT", "8080")

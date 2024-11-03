@@ -214,7 +214,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 
 	dates := make([]time.Time, 0, 10)
 
-	for d := startDay; !d.After(endDay); d.AddDate(0, 0, 1) {
+	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
 		weekDay := d.Weekday()
 		if (weekDay == time.Saturday && !cycle.IncludeSaturday) || (weekDay == time.Sunday && !cycle.IncludeSunday) {
 			continue
@@ -265,10 +265,13 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		}(ctx, &wg, ch, errCh, *entry, group)
 
 	}
+
 	go func() {
 		wg.Wait()
 		close(ch)
 		close(errCh)
+		ch = nil
+		errCh = nil
 	}()
 
 	entries := make([]types.PlanningEntry, 0, len(dates))

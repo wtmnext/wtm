@@ -13,11 +13,30 @@ import (
 
 func AdminProjectRouter(e *echo.Echo) {
 	projectsGroup := e.Group("/admin/projects")
+	projectsGroup.POST("/:id/planning/cycle", upsertPlanningCycle).Name = "admin.planning.UpsertPlanningCycle"
 	projectsGroup.POST("/:id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
 	projectsGroup.GET("/:id/planning", getPlanning).Name = "admin.planning.Get"
 	projectsGroup.GET("/:id", getProject).Name = "admin.project.Get"
 	projectsGroup.POST("", upsertProject).Name = "admin.planning.UpsertProject"
 	projectsGroup.GET("", listProjects).Name = "admin.project.ListProject"
+}
+
+func upsertPlanningCycle(c echo.Context) error {
+	adminUser, err := services.GetUser(c)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
+	}
+	cycle := types.PlanningCycle{}
+	if err := c.Bind(&cycle); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
+	defer cancel()
+	if _, err := services.MakePlanningCycle(ctx, &cycle, adminUser.Group); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, cycle)
 }
 
 func upsertPlanningEntry(c echo.Context) error {

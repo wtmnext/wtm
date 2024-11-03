@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -24,6 +25,13 @@ import (
 var BANNER string
 
 func main() {
+	loc, err := time.LoadLocation(config.TZ)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("will use tz", loc)
+	time.Local = loc
+
 	defer db.Disconnect()
 	defer close(email.MailChan)
 
