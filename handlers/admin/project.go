@@ -33,10 +33,11 @@ func upsertPlanningCycle(c echo.Context) error {
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	if _, err := services.MakePlanningCycle(ctx, &cycle, adminUser.Group); err != nil {
+	entries, err := services.MakePlanningCycle(ctx, &cycle, adminUser.Group)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, cycle)
+	return c.JSON(http.StatusOK, entries)
 }
 
 func upsertPlanningEntry(c echo.Context) error {

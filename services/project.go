@@ -250,8 +250,8 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		start := time.Date(date.Year(), date.Month(), date.Day(), shift.StartHour, shift.StartMinute, 0, 0, date.Location())
 		end := time.Date(date.Year(), date.Month(), date.Day(), shift.EndHour, shift.EndMinute, 0, 0, date.Location())
 		entry.ID = ""
-		entry.Start = start
-		entry.End = end
+		entry.Start = start.Format(types.BelgianDateTimeFormat)
+		entry.End = end.Format(types.BelgianDateTimeFormat)
 		wg.Add(1)
 		go func(ctx context.Context, wg *sync.WaitGroup, ch chan<- types.PlanningEntry, errCh chan<- error, entry types.PlanningEntry, group types.Group) {
 			defer wg.Done()
@@ -356,11 +356,11 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 	for _, user := range usersToBeCancelled {
 		go email.SendAsync([]string{user.Email}, []string{}, "Cancelled planning assignment",
 			fmt.Sprintf(`A planning assignment has been cancelled for project %s. You've been unassigned for slot %s -> %s`,
-				project.Name, entry.Start.Format("02/01/2006 15:04"), entry.End.Format("02/01/2006 15:04")))
+				project.Name, entry.Start, entry.End))
 	}
 	for _, user := range filteredUsersNewAssign {
 		go email.SendAsync([]string{user.Email}, []string{}, "Planning assignment",
 			fmt.Sprintf(`A planning assignment has been added for project %s. You've been assigned for slot %s -> %s`,
-				project.Name, entry.Start.Format("02/01/2006 15:04"), entry.End.Format("02/01/2006 15:04")))
+				project.Name, entry.Start, entry.End))
 	}
 }

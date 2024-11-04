@@ -26,8 +26,8 @@ type PlanningEntry struct {
 	ProjectID               string     `bson:"projectId" json:"projectId" validate:"required"`
 	CreatedAt               time.Time  `bson:"createdAt" json:"createdAt"`
 	UpdatedAt               *time.Time `bson:"updatedAt,omitempty" json:"updatedAt,omitempty"`
-	Start                   time.Time  `bson:"start" json:"start" validate:"required"`
-	End                     time.Time  `bson:"end" json:"end" validate:"required"`
+	Start                   string     `bson:"start" json:"start" validate:"required"`
+	End                     string     `bson:"end" json:"end" validate:"required"`
 	EmployeeIDs             []string   `bson:"employeeIds, omitempty" json:"employeeIds"`
 	AllowMultipleAssignment bool       `bson:"multipleAssignment" json:"multipleAssignment"`
 	Title                   string     `bson:"title" json:"title" validate:"required"`
