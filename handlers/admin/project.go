@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/wtm/config"
 	"github.com/nbittich/wtm/services"
+	projectService "github.com/nbittich/wtm/services/project"
 	"github.com/nbittich/wtm/types"
 )
 
@@ -33,7 +34,7 @@ func upsertPlanningCycle(c echo.Context) error {
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	entries, err := services.MakePlanningCycle(ctx, &cycle, adminUser.Group)
+	entries, err := projectService.MakePlanningCycle(ctx, &cycle, adminUser.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -52,7 +53,7 @@ func upsertPlanningEntry(c echo.Context) error {
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	entry, err := services.AddOrUpdatePlanningEntry(ctx, planningEntry, true, adminUser.Group)
+	entry, err := projectService.AddOrUpdatePlanningEntry(ctx, planningEntry, true, adminUser.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -72,7 +73,7 @@ func upsertProject(c echo.Context) error {
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	if _, err := services.AddOrUpdateProject(ctx, &project, adminUser.Group); err != nil {
+	if _, err := projectService.AddOrUpdateProject(ctx, &project, adminUser.Group); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, project)
@@ -85,7 +86,7 @@ func listProjects(c echo.Context) error {
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	projects, err := services.GetProjects(ctx, adminUser.Group)
+	projects, err := projectService.GetProjects(ctx, adminUser.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -100,7 +101,7 @@ func getPlanning(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
 	projectID := c.Param("id")
-	planning, err := services.GetPlanning(ctx, projectID, adminUser.Group)
+	planning, err := projectService.GetPlanning(ctx, projectID, adminUser.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -115,7 +116,7 @@ func getProject(c echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
 	projectID := c.Param("id")
-	project, err := services.GetProject(ctx, projectID, adminUser.Group)
+	project, err := projectService.GetProject(ctx, projectID, adminUser.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

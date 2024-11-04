@@ -2,6 +2,8 @@ MAIN=cmd/wtm/server.go
 P=bin/wtm
 FLAGS=-ldflags="-s -w"
 
+test:
+	@go test ./tests/... -v
 fmt:
 	@go fmt ./...
 tpl:

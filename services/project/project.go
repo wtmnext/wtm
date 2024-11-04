@@ -1,4 +1,4 @@
-package services
+package project
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nbittich/wtm/config"
+	"github.com/nbittich/wtm/services"
 	"github.com/nbittich/wtm/services/db"
 	"github.com/nbittich/wtm/services/email"
 	"github.com/nbittich/wtm/services/utils"
@@ -124,7 +125,7 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry types.PlanningEntry, as
 		if len(entry.EmployeeIDs) > 1 && !entry.AllowMultipleAssignment {
 			return nil, fmt.Errorf("multiple assignment is not allowed for this entry")
 		}
-		users, err = FindAllUsersByIDs(ctx, entry.EmployeeIDs, group)
+		users, err = services.FindAllUsersByIDs(ctx, entry.EmployeeIDs, group)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +188,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		if len(cycle.EmployeeIDs) > 1 && !cycle.AllowMultipleAssignment {
 			return nil, fmt.Errorf("multiple assignment is not allowed for this entry")
 		}
-		users, err = FindAllUsersByIDs(ctx, cycle.EmployeeIDs, group)
+		users, err = services.FindAllUsersByIDs(ctx, cycle.EmployeeIDs, group)
 		if err != nil {
 			return nil, err
 		}
@@ -420,13 +421,13 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 			filteredUsersCancelledAssign = append(filteredUsersCancelledAssign, assignment.EmployeeID)
 		}
 	}
-	usersToBeCancelled, err := FindAllUsersByIDs(ctx, filteredUsersCancelledAssign, group)
+	usersToBeCancelled, err := services.FindAllUsersByIDs(ctx, filteredUsersCancelledAssign, group)
 	if err != nil {
 		log.Println("could not get users to unassign them", err)
 		return nil, err
 	}
 
-	users, err := FindAllUsersByIDs(ctx, entry.EmployeeIDs, group)
+	users, err := services.FindAllUsersByIDs(ctx, entry.EmployeeIDs, group)
 	if err != nil {
 		log.Println("could not get users to assign them", err)
 		return nil, err

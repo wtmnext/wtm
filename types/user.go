@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -78,12 +79,54 @@ type UserClaims struct {
 }
 
 type UserProfile struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
+	FirstName    string                  `json:"firstName"`
+	LastName     string                  `json:"lastName"`
+	Availability *UserNormalAvailability `json:"availability" bson:"availability,omitempty"`
 }
 
 type UserSetting struct {
 	Lang string `json:"lang"`
+}
+
+type UserNormalAvailability struct {
+	Days       []time.Weekday `json:"days"`
+	MinHour    int            `json:"minHour"`
+	MaxHour    int            `json:"maxHour"`
+	HourPerDay int            `json:"hourPerday"`
+	Overlap    bool           `json:"overlap"` // if we accept date on next day or not
+}
+
+func (availability *UserNormalAvailability) IsUserAvailable(entry *PlanningEntry) (bool, error) {
+	var (
+		start, end time.Time
+		err        error
+	)
+
+	if start, err = time.Parse(BelgianDateTimeFormat, entry.Start); err != nil {
+		return false, err
+	}
+	if end, err = time.Parse(BelgianDateTimeFormat, entry.End); err != nil {
+		return false, err
+	}
+	if availability != nil {
+		if !slices.Contains(availability.Days, start.Weekday()) || !slices.Contains(availability.Days, end.Weekday()) {
+			return false, nil
+		}
+		difference := end.Sub(start).Abs()
+		if availability.HourPerDay < int(difference.Hours()) {
+			return false, nil
+		}
+		minTime := time.Date(start.Year(), start.Month(), start.Day(), availability.MinHour, 0, 0, 0, start.Location())
+		maxTime := time.Date(start.Year(), start.Month(), end.Day(), availability.MaxHour, 0, 0, 0, start.Location())
+
+		if end.Day() > start.Day() && !availability.Overlap {
+			return false, nil
+		}
+
+		return (start.After(minTime) || start.Equal(minTime)) &&
+			(end.Before(maxTime) || end.Equal(maxTime)), nil
+	}
+	return false, nil
 }
 
 func (user User) GetID() string {

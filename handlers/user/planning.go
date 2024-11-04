@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/nbittich/wtm/config"
 	"github.com/nbittich/wtm/services"
+	projectService "github.com/nbittich/wtm/services/project"
 )
 
 func UserPlanningRoute(e *echo.Echo) {
@@ -22,7 +23,7 @@ func getPlanningAssignments(c echo.Context) error {
 	}
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	assignments, err := services.GetPlanningAssignments(ctx, user.ID, user.Group)
+	assignments, err := projectService.GetPlanningAssignments(ctx, user.ID, user.Group)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
