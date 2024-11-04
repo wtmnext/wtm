@@ -8,8 +8,6 @@ import (
 )
 
 func TestIsUserAvailable(t *testing.T) {
-	// Monday
-
 	tests := []struct {
 		label        string
 		start        time.Time
