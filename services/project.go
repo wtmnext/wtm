@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -112,7 +113,7 @@ func AddOrUpdateProject(ctx context.Context, project *types.Project, group types
 	return project, nil
 }
 
-func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, group types.Group) (*types.PlanningEntry, error) {
+func AddOrUpdatePlanningEntry(ctx context.Context, entry types.PlanningEntry, assign bool, group types.Group) (*types.PlanningEntry, error) {
 	if err := utils.ValidateStruct(entry); err != nil {
 		return nil, err
 	}
@@ -159,12 +160,20 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry *types.PlanningEntry, g
 	if err != nil {
 		return nil, err
 	}
-	if _, err := db.InsertOrUpdate(ctx, entry, planningCollection); err != nil {
-		return entry, err
+	if _, err := db.InsertOrUpdate(ctx, &entry, planningCollection); err != nil {
+		return &entry, err
 	}
-	go assignOrUnassignPlanningEntry(entry, users, project, group)
+	if assign {
+		go func() {
+			if result, err := assignOrUnassignPlanningEntry(entry, project, group); err == nil {
+				sendMailAssignOrUnassign([]planningAssignmentResult{*result})
+			} else {
+				log.Println("could not assign/unassign planning entry")
+			}
+		}()
+	}
 
-	return entry, nil
+	return &entry, nil
 }
 
 func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group types.Group) ([]types.PlanningEntry, error) {
@@ -214,6 +223,10 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 
 	dates := make([]time.Time, 0, 10)
 
+	project, err := GetProject(ctx, cycle.ProjectID, group)
+	if err != nil {
+		return nil, err
+	}
 	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
 		weekDay := d.Weekday()
 		if (weekDay == time.Saturday && !cycle.IncludeSaturday) || (weekDay == time.Sunday && !cycle.IncludeSunday) {
@@ -247,20 +260,27 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			}
 		}
 		shift := cycle.Shifts[shiftIndex]
+
+		var extraDay int
+		// check if is between two dates
+		if shift.EndHour < shift.StartHour {
+			extraDay += 1
+		}
 		start := time.Date(date.Year(), date.Month(), date.Day(), shift.StartHour, shift.StartMinute, 0, 0, date.Location())
-		end := time.Date(date.Year(), date.Month(), date.Day(), shift.EndHour, shift.EndMinute, 0, 0, date.Location())
+		end := time.Date(date.Year(), date.Month(), date.Day()+extraDay, shift.EndHour, shift.EndMinute, 0, 0, date.Location())
 		entry.ID = ""
+
 		entry.Start = start.Format(types.BelgianDateTimeFormat)
 		entry.End = end.Format(types.BelgianDateTimeFormat)
 		wg.Add(1)
 		go func(ctx context.Context, wg *sync.WaitGroup, ch chan<- types.PlanningEntry, errCh chan<- error, entry types.PlanningEntry, group types.Group) {
 			defer wg.Done()
 			entry.CreatedAt = time.Now()
-			_, err := AddOrUpdatePlanningEntry(ctx, &entry, group)
+			newEntry, err := AddOrUpdatePlanningEntry(ctx, entry, false, group)
 			if err != nil {
 				errCh <- err
 			} else {
-				ch <- entry
+				ch <- *newEntry
 			}
 		}(ctx, &wg, ch, errCh, *entry, group)
 
@@ -294,17 +314,89 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			break
 		}
 	}
+
+	// assigned and send mail
+	go func(entries []types.PlanningEntry, project types.Project, group types.Group) {
+		assignmentResults := make([]planningAssignmentResult, 0, len(entries))
+		for _, entry := range entries {
+			result, err := assignOrUnassignPlanningEntry(entry, project, group)
+			if err != nil {
+				log.Println("could not assign... Err:", err, "no mail sent! entries:", entries)
+				return
+			}
+			assignmentResults = append(assignmentResults, *result)
+		}
+		sendMailAssignOrUnassign(assignmentResults)
+	}(entries, *project, group)
+
 	return entries, errored
 }
 
-func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.User, project types.Project, group types.Group) {
-	assignmentCol, err := db.GetCollection(PlanningAssignmentCollection, group)
-	if len(users) == 0 {
-		return
+type planningAssignmentResult struct {
+	usersToBeCancelled     []types.User
+	filteredUsersNewAssign []types.User
+	entry                  types.PlanningEntry
+	project                types.Project
+}
+
+func sendMailAssignOrUnassign(assignmentResults []planningAssignmentResult) {
+	type UserKey struct {
+		UserID string
+		Email  string
 	}
+	usersToBecancelled := make(map[UserKey][]string)
+	usersNewAssign := make(map[UserKey][]string)
+	slices.SortFunc(assignmentResults, func(a planningAssignmentResult, b planningAssignmentResult) int {
+		start, err := time.Parse(types.BelgianDateTimeFormat, a.entry.Start)
+		if err != nil {
+			log.Println("could not parse start date...sorting will be wrong", err)
+			return 0
+		}
+		end, err := time.Parse(types.BelgianDateTimeFormat, b.entry.Start)
+		if err != nil {
+			log.Println("could not parse end date...sorting will be wrong", err)
+			return 0
+		}
+		return start.Compare(end)
+	})
+	for _, assignmentResult := range assignmentResults {
+		for _, user := range assignmentResult.usersToBeCancelled {
+			userKey := UserKey{UserID: user.ID, Email: user.Email}
+			if _, exists := usersToBecancelled[userKey]; !exists {
+				usersToBecancelled[userKey] = make([]string, 0, 10)
+			}
+			usersToBecancelled[userKey] = append(usersToBecancelled[userKey],
+				fmt.Sprintf(`Project %s: You've been unassigned for slot %s -> %s`,
+					assignmentResult.project.Name, assignmentResult.entry.Start, assignmentResult.entry.End))
+
+		}
+		for _, user := range assignmentResult.filteredUsersNewAssign {
+			userKey := UserKey{UserID: user.ID, Email: user.Email}
+			if _, exists := usersNewAssign[userKey]; !exists {
+				usersNewAssign[userKey] = make([]string, 0, 10)
+			}
+			usersNewAssign[userKey] = append(usersNewAssign[userKey],
+				fmt.Sprintf(`Project %s: You've been assigned for slot %s -> %s`,
+					assignmentResult.project.Name, assignmentResult.entry.Start, assignmentResult.entry.End))
+
+		}
+	}
+
+	for user, messages := range usersToBecancelled {
+		email.SendAsync([]string{user.Email}, []string{}, "[CANCELLED]: Planning assignment(s)",
+			strings.Join(messages, "<br>"))
+	}
+	for user, messages := range usersNewAssign {
+		email.SendAsync([]string{user.Email}, []string{}, "Planning assignment(s)",
+			strings.Join(messages, "<br>"))
+	}
+}
+
+func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Project, group types.Group) (*planningAssignmentResult, error) {
+	assignmentCol, err := db.GetCollection(PlanningAssignmentCollection, group)
 	if err != nil {
 		log.Println("could not get the planning collection", err)
-		return
+		return nil, err
 	}
 	filter := bson.M{
 		"entryId":   entry.ID,
@@ -315,11 +407,11 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 	existingAssignements, err := db.Find[types.PlanningAssignment](ctx, filter, assignmentCol, nil)
 	if err != nil {
 		log.Println("could not fetch existing assignments", err)
-		return
+		return nil, err
 	}
 	assignmentsToUpdate := make([]types.Identifiable, 0, len(existingAssignements))
-	filteredUsersNewAssign := make([]*types.User, 0, len(users))
-	filteredUsersCancelledAssign := make([]string, 0, len(users))
+	filteredUsersNewAssign := make([]*types.User, 0, len(existingAssignements))
+	filteredUsersCancelledAssign := make([]string, 0, len(existingAssignements))
 	for _, assignment := range existingAssignements {
 		if !slices.Contains(entry.EmployeeIDs, assignment.EmployeeID) {
 			assignment.Cancelled = true
@@ -331,9 +423,14 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 	usersToBeCancelled, err := FindAllUsersByIDs(ctx, filteredUsersCancelledAssign, group)
 	if err != nil {
 		log.Println("could not get users to unassign them", err)
-		return
+		return nil, err
 	}
 
+	users, err := FindAllUsersByIDs(ctx, entry.EmployeeIDs, group)
+	if err != nil {
+		log.Println("could not get users to assign them", err)
+		return nil, err
+	}
 	for _, user := range users {
 		if !slices.ContainsFunc(existingAssignements, func(a types.PlanningAssignment) bool {
 			return a.EmployeeID == user.ID
@@ -350,17 +447,12 @@ func assignOrUnassignPlanningEntry(entry *types.PlanningEntry, users []types.Use
 	}
 	if err = db.InsertOrUpdateMany(ctx, assignmentsToUpdate, assignmentCol); err != nil {
 		log.Println("Could not update assignments", err)
-		return
+		return nil, err
 	}
-
-	for _, user := range usersToBeCancelled {
-		go email.SendAsync([]string{user.Email}, []string{}, "Cancelled planning assignment",
-			fmt.Sprintf(`A planning assignment has been cancelled for project %s. You've been unassigned for slot %s -> %s`,
-				project.Name, entry.Start, entry.End))
-	}
-	for _, user := range filteredUsersNewAssign {
-		go email.SendAsync([]string{user.Email}, []string{}, "Planning assignment",
-			fmt.Sprintf(`A planning assignment has been added for project %s. You've been assigned for slot %s -> %s`,
-				project.Name, entry.Start, entry.End))
-	}
+	return &planningAssignmentResult{
+		usersToBeCancelled:     usersToBeCancelled,
+		filteredUsersNewAssign: users,
+		entry:                  entry,
+		project:                project,
+	}, nil
 }

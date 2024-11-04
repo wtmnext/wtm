@@ -52,10 +52,11 @@ func upsertPlanningEntry(c echo.Context) error {
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), config.MongoCtxTimeout)
 	defer cancel()
-	if _, err := services.AddOrUpdatePlanningEntry(ctx, &planningEntry, adminUser.Group); err != nil {
+	entry, err := services.AddOrUpdatePlanningEntry(ctx, planningEntry, true, adminUser.Group)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	return c.JSON(http.StatusOK, planningEntry)
+	return c.JSON(http.StatusOK, entry)
 }
 
 func upsertProject(c echo.Context) error {
