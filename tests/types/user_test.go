@@ -7,7 +7,7 @@ import (
 	"github.com/nbittich/wtm/types"
 )
 
-func TestIsUserAvailable(t *testing.T) {
+func TestIsAvailable(t *testing.T) {
 	tests := []struct {
 		label        string
 		start        time.Time
@@ -23,7 +23,6 @@ func TestIsUserAvailable(t *testing.T) {
 				MinHour:    22,
 				MaxHour:    6,
 				HourPerDay: 8,
-				Overlap:    true,
 			},
 
 			start:       time.Date(2024, time.November, 4, 23, 0, 0, 0, time.Now().Location()),
@@ -67,7 +66,6 @@ func TestIsUserAvailable(t *testing.T) {
 				MinHour:    22,
 				MaxHour:    6,
 				HourPerDay: 8,
-				Overlap:    true,
 			},
 
 			start:       time.Date(2024, time.November, 4, 22, 0, 0, 0, time.Now().Location()),
@@ -83,7 +81,6 @@ func TestIsUserAvailable(t *testing.T) {
 				MinHour:    22,
 				MaxHour:    6,
 				HourPerDay: 8,
-				Overlap:    true,
 			},
 
 			start:       time.Date(2024, time.November, 4, 22, 0, 0, 0, time.Now().Location()),
@@ -108,16 +105,14 @@ func TestIsUserAvailable(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.label, func(t *testing.T) {
-			entry := types.PlanningEntry{
-				Start: test.start.Format(types.BelgianDateTimeFormat),
-				End:   test.end.Format(types.BelgianDateTimeFormat),
-			}
-			res, err := test.availability.IsUserAvailable(&entry)
+			res, err := test.availability.IsAvailable(test.start.Format(types.BelgianDateTimeFormat), test.end.Format(types.BelgianDateTimeFormat))
 			if err != test.expectedErr {
 				t.Fatal(err)
 			}
 			if res != test.expectedRes {
-				t.Errorf("%t!=%t: expect entry: %v+  =>  availability: %v+", res, test.expectedRes, entry, test.availability)
+				t.Errorf("%t!=%t: expect start: %s : end: %s  =>  availability: %v+", res, test.expectedRes,
+					test.start.Format(types.BelgianDateTimeFormat), test.end.Format(types.BelgianDateTimeFormat),
+					test.availability)
 			}
 		})
 	}

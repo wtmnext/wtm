@@ -9,7 +9,10 @@ type HasID interface {
 	GetID() string
 }
 
-const BelgianDateTimeFormat = "02/01/2006 15:04"
+const (
+	BelgianDateTimeFormat = "02/01/2006 15:04"
+	BelgianDateFormat     = "02/01/2006"
+)
 
 type Comment struct {
 	UserID      string     `bson:"userId" json:"userId"`

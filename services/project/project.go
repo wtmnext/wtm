@@ -25,6 +25,44 @@ const (
 	PlanningAssignmentCollection = "planningAssignment"
 )
 
+func IsUserAvailable(ctx context.Context, employeeID string, entry *types.PlanningEntry, group types.Group) (bool, error) {
+	user, err := services.FindUserByID(ctx, employeeID, group)
+	if err != nil {
+		return false, err
+	}
+	ok, err := user.Profile.Availability.IsAvailable(entry.Start, entry.End)
+	if err != nil || !ok {
+		return ok, err
+	}
+	details, err := GetPlanningAssignments(ctx, employeeID, group)
+	if err != nil {
+		return false, err
+	}
+	for _, detail := range details {
+		var (
+			assignedStart, assignedEnd, start, end time.Time
+			err                                    error
+		)
+		if assignedStart, err = time.Parse(types.BelgianDateTimeFormat, detail.Entry.Start); err != nil {
+			return false, err
+		}
+		if assignedEnd, err = time.Parse(types.BelgianDateTimeFormat, detail.Entry.End); err != nil {
+			return false, err
+		}
+		if start, err = time.Parse(types.BelgianDateTimeFormat, entry.Start); err != nil {
+			return false, err
+		}
+		if end, err = time.Parse(types.BelgianDateTimeFormat, entry.End); err != nil {
+			return false, err
+		}
+		if !(end.Before(assignedStart) || start.After(assignedEnd)) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 func GetPlanningAssignments(ctx context.Context, employeeID string, group types.Group) ([]types.PlanningAssignmentDetail, error) {
 	collection, err := db.GetCollection(PlanningAssignmentCollection, group)
 	if err != nil {
@@ -201,11 +239,11 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			}
 		}
 	}
-	startDay, err := time.Parse("02/01/2006", cycle.Start)
+	startDay, err := time.Parse(types.BelgianDateFormat, cycle.Start)
 	if err != nil {
 		return nil, err
 	}
-	endDay, err := time.Parse("02/01/2006", cycle.End)
+	endDay, err := time.Parse(types.BelgianDateFormat, cycle.End)
 	if err != nil {
 		return nil, err
 	}
