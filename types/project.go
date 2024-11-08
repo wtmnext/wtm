@@ -60,6 +60,10 @@ type (
 		IncludeSaturday         bool                  `json:"includeSaturday"`
 		IncludeSunday           bool                  `json:"includeSunday"`
 	}
+	PlanningValidity struct {
+		Valid    bool      `json:"valid"`
+		Comments []Comment `json:"comments"`
+	}
 	Shift struct {
 		StartHour   int `json:"startHour" validate:"required,min=0,max=23"`
 		StartMinute int `json:"startMinute" validate:"required,min=0,max=59"`

@@ -25,22 +25,19 @@ const (
 	PlanningAssignmentCollection = "planningAssignment"
 )
 
-func IsUserAvailable(ctx context.Context, employeeID string, entry *types.PlanningEntry, group types.Group) (bool, error) {
+func IsUserAvailable(ctx context.Context, user *types.User, entry *types.PlanningEntry, group types.Group) (bool, error) {
 	var (
-		user                                   types.User
 		err                                    error
 		assignedStart, assignedEnd, start, end time.Time
 		ok                                     bool
 	)
-	if user, err = services.FindUserByID(ctx, employeeID, group); err != nil {
-		return false, err
-	}
+
 	if user.Profile.Availability != nil {
 		if ok, err = user.Profile.Availability.IsAvailable(entry.Start, entry.End); err != nil || !ok {
 			return ok, err
 		}
 	}
-	details, err := GetPlanningAssignments(ctx, employeeID, group)
+	details, err := GetPlanningAssignments(ctx, user.ID, group)
 	if err != nil {
 		return false, err
 	}
@@ -220,19 +217,60 @@ func AddOrUpdatePlanningEntry(ctx context.Context, entry types.PlanningEntry, as
 	return &entry, nil
 }
 
-func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group types.Group) ([]types.PlanningEntry, error) {
-	if err := utils.ValidateStruct(cycle); err != nil {
+func CheckEntriesValid(ctx context.Context, entries []types.PlanningEntry, group types.Group) (*types.PlanningValidity, error) {
+	valid := types.PlanningValidity{
+		Valid:    true,
+		Comments: make([]types.Comment, 0, 10),
+	}
+	usersCache := make(map[string]types.User, 2)
+	var (
+		user   types.User
+		exists bool
+		err    error
+	)
+	for _, entry := range entries {
+		for _, userId := range entry.EmployeeIDs {
+			if user, exists = usersCache[userId]; !exists {
+				if user, err = services.FindUserByID(ctx, userId, group); err != nil {
+					return nil, err
+				}
+				usersCache[userId] = user
+			}
+			ok, err := IsUserAvailable(ctx, &user, &entry, group)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				valid.Comments = append(valid.Comments, types.Comment{
+					UserID:      user.ID,
+					Message:     fmt.Sprintf("Cannot assign %s for %s-> %s", user.Username, entry.Start, entry.End),
+					CommentType: types.WARNING,
+					CreatedAt:   time.Now(),
+					UpdatedAt:   nil,
+				})
+				valid.Valid = false
+			}
+		}
+	}
+	return &valid, nil
+}
+
+func GeneratePlanningEntriesFromCycle(ctx context.Context, cycle *types.PlanningCycle, group types.Group) ([]types.PlanningEntry, error) {
+	var (
+		err      error
+		users    []types.User
+		startDay time.Time
+		endDay   time.Time
+	)
+	if err = utils.ValidateStruct(cycle); err != nil {
 		return nil, err
 	}
-	var users []types.User
-	var err error
 	if len(cycle.EmployeeIDs) != 0 {
 
 		if len(cycle.EmployeeIDs) > 1 && !cycle.AllowMultipleAssignment {
 			return nil, fmt.Errorf("multiple assignment is not allowed for this entry")
 		}
-		users, err = services.FindAllUsersByIDs(ctx, cycle.EmployeeIDs, group)
-		if err != nil {
+		if users, err = services.FindAllUsersByIDs(ctx, cycle.EmployeeIDs, group); err != nil {
 			return nil, err
 		}
 		if len(users) != len(cycle.EmployeeIDs) {
@@ -244,33 +282,18 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			}
 		}
 	}
-	startDay, err := time.Parse(types.BelgianDateFormat, cycle.Start)
-	if err != nil {
+	if startDay, err = time.Parse(types.BelgianDateFormat, cycle.Start); err != nil {
 		return nil, err
 	}
-	endDay, err := time.Parse(types.BelgianDateFormat, cycle.End)
-	if err != nil {
+	if endDay, err = time.Parse(types.BelgianDateFormat, cycle.End); err != nil {
 		return nil, err
 	}
 	if startDay.After(endDay) {
 		return nil, fmt.Errorf("start day cannot be after end day")
 	}
 
-	entry := &types.PlanningEntry{
-		ProjectID:               cycle.ProjectID,
-		EmployeeIDs:             cycle.EmployeeIDs,
-		AllowMultipleAssignment: cycle.AllowMultipleAssignment,
-		Title:                   cycle.Title,
-		Description:             cycle.Description,
-		Comments:                []types.Comment{},
-	}
-
 	dates := make([]time.Time, 0, 10)
 
-	project, err := GetProject(ctx, cycle.ProjectID, group)
-	if err != nil {
-		return nil, err
-	}
 	for d := startDay; !d.After(endDay); d = d.AddDate(0, 0, 1) {
 		weekDay := d.Weekday()
 		if (weekDay == time.Saturday && !cycle.IncludeSaturday) || (weekDay == time.Sunday && !cycle.IncludeSunday) {
@@ -278,6 +301,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		}
 		dates = append(dates, d)
 	}
+	entries := make([]types.PlanningEntry, 0, len(dates))
 	var frequency int
 	switch cycle.RotationFrequencyType {
 	case types.Days:
@@ -288,12 +312,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		return nil, fmt.Errorf("unknown rotation frequency type")
 	}
 	shiftIndex := -1 // we want to start at 0
-	var wg sync.WaitGroup
 
-	ch := make(chan types.PlanningEntry, 2)
-	errCh := make(chan error, 1)
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	for idx, date := range dates {
 		if idx%frequency == 0 {
 			// new cycle
@@ -312,10 +331,36 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		}
 		start := time.Date(date.Year(), date.Month(), date.Day(), shift.StartHour, shift.StartMinute, 0, 0, date.Location())
 		end := time.Date(date.Year(), date.Month(), date.Day()+extraDay, shift.EndHour, shift.EndMinute, 0, 0, date.Location())
-		entry.ID = ""
+		entries = append(entries, types.PlanningEntry{
+			ProjectID:               cycle.ProjectID,
+			EmployeeIDs:             cycle.EmployeeIDs,
+			Start:                   start.Format(types.BelgianDateTimeFormat),
+			End:                     end.Format(types.BelgianDateTimeFormat),
+			AllowMultipleAssignment: cycle.AllowMultipleAssignment,
+			Title:                   cycle.Title,
+			Description:             cycle.Description,
+			Comments:                []types.Comment{},
+		})
+	}
+	return entries, nil
+}
 
-		entry.Start = start.Format(types.BelgianDateTimeFormat)
-		entry.End = end.Format(types.BelgianDateTimeFormat)
+func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group types.Group) ([]types.PlanningEntry, error) {
+	var wg sync.WaitGroup
+	ch := make(chan types.PlanningEntry, 2)
+	errCh := make(chan error, 1)
+
+	draftEntries, err := GeneratePlanningEntriesFromCycle(ctx, cycle, group)
+	if err != nil {
+		return nil, err
+	}
+	project, err := GetProject(ctx, cycle.ProjectID, group)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	for _, entry := range draftEntries {
 		wg.Add(1)
 		go func(ctx context.Context, wg *sync.WaitGroup, ch chan<- types.PlanningEntry, errCh chan<- error, entry types.PlanningEntry, group types.Group) {
 			defer wg.Done()
@@ -326,8 +371,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			} else {
 				ch <- *newEntry
 			}
-		}(ctx, &wg, ch, errCh, *entry, group)
-
+		}(ctx, &wg, ch, errCh, entry, group)
 	}
 
 	go func() {
@@ -338,7 +382,7 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 		errCh = nil
 	}()
 
-	entries := make([]types.PlanningEntry, 0, len(dates))
+	entries := make([]types.PlanningEntry, 0, len(draftEntries))
 
 	var errored error = nil
 	for {
@@ -459,33 +503,24 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 		return nil, err
 	}
 	// delete employee ids that are not available
-	removedEmployeeIds := make([]string, 0, len(entry.EmployeeIDs))
-	entry.EmployeeIDs = slices.DeleteFunc(entry.EmployeeIDs, func(id string) bool {
-		ok, err := IsUserAvailable(ctx, id, &entry, group)
-		if err != nil {
-			log.Println("could not check if user available", err, entry)
-		}
-		if !ok {
-			removedEmployeeIds = append(removedEmployeeIds, id)
-		}
-		return !ok
-	})
-	if len(removedEmployeeIds) != 0 {
-		users, err := services.FindAllUsersByIDs(ctx, removedEmployeeIds, group)
-		if err != nil {
-			log.Println("could not get all users", err)
-		}
-		for _, user := range users {
-			entry.Comments = append(entry.Comments, types.Comment{
-				UserID:      user.ID,
-				Message:     fmt.Sprintf("Could not assign %s. Employee is already assigned to another project or doesn't work at that time", user.Username),
-				CommentType: types.WARNING,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   nil,
-			})
-		}
-		db.InsertOrUpdate(ctx, &entry, planningCol)
+	// add a comment if user was not available and therefore removed
+	valid, err := CheckEntriesValid(ctx, []types.PlanningEntry{entry}, group)
+	if err != nil {
+		return nil, err
 	}
+	if !valid.Valid {
+		entry.Comments = append(entry.Comments, valid.Comments...)
+		entry.EmployeeIDs = slices.DeleteFunc(entry.EmployeeIDs, func(id string) bool {
+			return slices.ContainsFunc(valid.Comments, func(comment types.Comment) bool {
+				return comment.UserID == id
+			})
+		})
+		if _, err := db.InsertOrUpdate(ctx, &entry, planningCol); err != nil {
+			return nil, err
+		}
+
+	}
+
 	assignmentsToUpdate := make([]types.Identifiable, 0, len(existingAssignements))
 	filteredUsersNewAssign := make([]*types.User, 0, len(existingAssignements))
 	filteredUsersCancelledAssign := make([]string, 0, len(existingAssignements))
