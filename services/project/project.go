@@ -26,23 +26,28 @@ const (
 )
 
 func IsUserAvailable(ctx context.Context, employeeID string, entry *types.PlanningEntry, group types.Group) (bool, error) {
-	user, err := services.FindUserByID(ctx, employeeID, group)
-	if err != nil {
+	var (
+		user                                   types.User
+		err                                    error
+		assignedStart, assignedEnd, start, end time.Time
+		ok                                     bool
+	)
+	if user, err = services.FindUserByID(ctx, employeeID, group); err != nil {
 		return false, err
 	}
-	ok, err := user.Profile.Availability.IsAvailable(entry.Start, entry.End)
-	if err != nil || !ok {
-		return ok, err
+	if user.Profile.Availability != nil {
+		if ok, err = user.Profile.Availability.IsAvailable(entry.Start, entry.End); err != nil || !ok {
+			return ok, err
+		}
 	}
 	details, err := GetPlanningAssignments(ctx, employeeID, group)
 	if err != nil {
 		return false, err
 	}
 	for _, detail := range details {
-		var (
-			assignedStart, assignedEnd, start, end time.Time
-			err                                    error
-		)
+		if detail.Entry.ID == entry.ID {
+			continue
+		}
 		if assignedStart, err = time.Parse(types.BelgianDateTimeFormat, detail.Entry.Start); err != nil {
 			return false, err
 		}
@@ -434,6 +439,11 @@ func sendMailAssignOrUnassign(assignmentResults []planningAssignmentResult) {
 func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Project, group types.Group) (*planningAssignmentResult, error) {
 	assignmentCol, err := db.GetCollection(PlanningAssignmentCollection, group)
 	if err != nil {
+		log.Println("could not get the assignment collection", err)
+		return nil, err
+	}
+	planningCol, err := db.GetCollection(PlanningCollection, group)
+	if err != nil {
 		log.Println("could not get the planning collection", err)
 		return nil, err
 	}
@@ -447,6 +457,34 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 	if err != nil {
 		log.Println("could not fetch existing assignments", err)
 		return nil, err
+	}
+	// delete employee ids that are not available
+	removedEmployeeIds := make([]string, 0, len(entry.EmployeeIDs))
+	entry.EmployeeIDs = slices.DeleteFunc(entry.EmployeeIDs, func(id string) bool {
+		ok, err := IsUserAvailable(ctx, id, &entry, group)
+		if err != nil {
+			log.Println("could not check if user available", err, entry)
+		}
+		if !ok {
+			removedEmployeeIds = append(removedEmployeeIds, id)
+		}
+		return !ok
+	})
+	if len(removedEmployeeIds) != 0 {
+		users, err := services.FindAllUsersByIDs(ctx, removedEmployeeIds, group)
+		if err != nil {
+			log.Println("could not get all users", err)
+		}
+		for _, user := range users {
+			entry.Comments = append(entry.Comments, types.Comment{
+				UserID:      user.ID,
+				Message:     fmt.Sprintf("Could not assign %s. Employee is already assigned to another project or doesn't work at that time", user.Username),
+				CommentType: types.WARNING,
+				CreatedAt:   time.Now(),
+				UpdatedAt:   nil,
+			})
+		}
+		db.InsertOrUpdate(ctx, &entry, planningCol)
 	}
 	assignmentsToUpdate := make([]types.Identifiable, 0, len(existingAssignements))
 	filteredUsersNewAssign := make([]*types.User, 0, len(existingAssignements))
