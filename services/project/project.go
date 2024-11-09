@@ -528,7 +528,7 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 	}
 
 	assignmentsToUpdate := make([]types.Identifiable, 0, len(existingAssignements))
-	filteredUsersNewAssign := make([]*types.User, 0, len(existingAssignements))
+	filteredUsersNewAssign := make([]types.User, 0, len(existingAssignements))
 	filteredUsersCancelledAssign := make([]string, 0, len(existingAssignements))
 	for _, assignment := range existingAssignements {
 		if !slices.Contains(entry.EmployeeIDs, assignment.EmployeeID) {
@@ -553,7 +553,7 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 		if !slices.ContainsFunc(existingAssignements, func(a types.PlanningAssignment) bool {
 			return a.EmployeeID == user.ID
 		}) {
-			filteredUsersNewAssign = append(filteredUsersNewAssign, &user)
+			filteredUsersNewAssign = append(filteredUsersNewAssign, user)
 			assignmentsToUpdate = append(assignmentsToUpdate, &types.PlanningAssignment{
 				EntryID:    entry.ID,
 				EmployeeID: user.ID,
@@ -571,7 +571,7 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 	}
 	return &planningAssignmentResult{
 		usersToBeCancelled:     usersToBeCancelled,
-		filteredUsersNewAssign: users,
+		filteredUsersNewAssign: filteredUsersNewAssign,
 		entry:                  entry,
 		project:                project,
 	}, nil
