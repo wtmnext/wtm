@@ -232,12 +232,14 @@ func CheckEntriesValid(ctx context.Context, entries []types.PlanningEntry, group
 		for _, userId := range entry.EmployeeIDs {
 			if user, exists = usersCache[userId]; !exists {
 				if user, err = services.FindUserByID(ctx, userId, group); err != nil {
+					log.Println("could not fetch user with id '", userId, "'")
 					return nil, err
 				}
 				usersCache[userId] = user
 			}
 			ok, err := IsUserAvailable(ctx, &user, &entry, group)
 			if err != nil {
+				log.Println("could not check if user available")
 				return nil, err
 			}
 			if !ok {
@@ -331,9 +333,11 @@ func GeneratePlanningEntriesFromCycle(ctx context.Context, cycle *types.Planning
 		}
 		start := time.Date(date.Year(), date.Month(), date.Day(), shift.StartHour, shift.StartMinute, 0, 0, date.Location())
 		end := time.Date(date.Year(), date.Month(), date.Day()+extraDay, shift.EndHour, shift.EndMinute, 0, 0, date.Location())
+		employeeIds := make([]string, len(cycle.EmployeeIDs))
+		copy(employeeIds, cycle.EmployeeIDs)
 		entries = append(entries, types.PlanningEntry{
 			ProjectID:               cycle.ProjectID,
-			EmployeeIDs:             cycle.EmployeeIDs,
+			EmployeeIDs:             employeeIds,
 			Start:                   start.Format(types.BelgianDateTimeFormat),
 			End:                     end.Format(types.BelgianDateTimeFormat),
 			AllowMultipleAssignment: cycle.AllowMultipleAssignment,
@@ -342,6 +346,8 @@ func GeneratePlanningEntriesFromCycle(ctx context.Context, cycle *types.Planning
 			Comments:                []types.Comment{},
 		})
 	}
+	// debugEntries, _ := json.Marshal(entries)
+	// os.WriteFile("/tmp/xx.json", debugEntries, 0o644)
 	return entries, nil
 }
 
@@ -402,7 +408,6 @@ func MakePlanningCycle(ctx context.Context, cycle *types.PlanningCycle, group ty
 			break
 		}
 	}
-
 	// assigned and send mail
 	go func(entries []types.PlanningEntry, project types.Project, group types.Group) {
 		assignmentResults := make([]planningAssignmentResult, 0, len(entries))
@@ -504,8 +509,10 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 	}
 	// delete employee ids that are not available
 	// add a comment if user was not available and therefore removed
+
 	valid, err := CheckEntriesValid(ctx, []types.PlanningEntry{entry}, group)
 	if err != nil {
+		log.Println("could not validate entry", entry.ID, "=>", entry.EmployeeIDs, "=>", len(entry.EmployeeIDs))
 		return nil, err
 	}
 	if !valid.Valid {
@@ -518,7 +525,6 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 		if _, err := db.InsertOrUpdate(ctx, &entry, planningCol); err != nil {
 			return nil, err
 		}
-
 	}
 
 	assignmentsToUpdate := make([]types.Identifiable, 0, len(existingAssignements))
@@ -557,9 +563,11 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 			})
 		}
 	}
-	if err = db.InsertOrUpdateMany(ctx, assignmentsToUpdate, assignmentCol); err != nil {
-		log.Println("Could not update assignments", err)
-		return nil, err
+	if len(assignmentsToUpdate) > 0 {
+		if err = db.InsertOrUpdateMany(ctx, assignmentsToUpdate, assignmentCol); err != nil {
+			log.Println("Could not update assignments", err)
+			return nil, err
+		}
 	}
 	return &planningAssignmentResult{
 		usersToBeCancelled:     usersToBeCancelled,

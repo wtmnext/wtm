@@ -15,7 +15,7 @@ import (
 func AdminProjectRouter(e *echo.Echo) {
 	projectsGroup := e.Group("/admin/projects")
 	projectsGroup.POST("/:id/planning/cycle", upsertPlanningCycle).Name = "admin.planning.UpsertPlanningCycle"
-	projectsGroup.POST("/:id/planning/cycle/validate", upsertPlanningCycle).Name = "admin.planning.ValidatePlanningCycle"
+	projectsGroup.POST("/:id/planning/cycle/validate", validatePlanningCycle).Name = "admin.planning.ValidatePlanningCycle"
 	projectsGroup.POST("/:id/planning/validate", validatePlanningEntry).Name = "admin.planning.Validate"
 	projectsGroup.POST("/:id/planning", upsertPlanningEntry).Name = "admin.planning.UpsertPlanning"
 	projectsGroup.GET("/:id/planning", getPlanning).Name = "admin.planning.Get"
