@@ -89,10 +89,10 @@ type UserSetting struct {
 }
 
 type UserNormalAvailability struct {
-	Days       []time.Weekday `json:"days"`
-	MinHour    int            `json:"minHour"`
-	MaxHour    int            `json:"maxHour"`
-	HourPerDay int            `json:"hourPerday"`
+	Days        []time.Weekday `json:"days"`
+	MinHour     int            `json:"minHour"`
+	MaxHour     int            `json:"maxHour"`
+	HoursPerDay int            `json:"hoursPerday"`
 }
 
 func (availability *UserNormalAvailability) IsAvailable(startStr string, endStr string) (bool, error) {
@@ -112,7 +112,7 @@ func (availability *UserNormalAvailability) IsAvailable(startStr string, endStr 
 			return false, nil
 		}
 		difference := end.Sub(start).Abs()
-		if availability.HourPerDay < int(difference.Hours()) {
+		if availability.HoursPerDay < int(difference.Hours()) {
 			return false, nil
 		}
 		minTime := time.Date(start.Year(), start.Month(), start.Day(), availability.MinHour, 0, 0, 0, start.Location())
