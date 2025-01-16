@@ -57,7 +57,7 @@ func IsUserAvailable(ctx context.Context, user *types.User, entry *types.Plannin
 		if end, err = time.Parse(types.BelgianDateTimeFormat, entry.End); err != nil {
 			return false, err
 		}
-		if !(end.Before(assignedStart) || start.After(assignedEnd)) {
+		if !end.Before(assignedStart) && !start.After(assignedEnd) {
 			return false, nil
 		}
 	}
