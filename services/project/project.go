@@ -229,13 +229,13 @@ func CheckEntriesValid(ctx context.Context, entries []types.PlanningEntry, group
 		err    error
 	)
 	for _, entry := range entries {
-		for _, userId := range entry.EmployeeIDs {
-			if user, exists = usersCache[userId]; !exists {
-				if user, err = services.FindUserByID(ctx, userId, group); err != nil {
-					log.Println("could not fetch user with id '", userId, "'")
+		for _, userID := range entry.EmployeeIDs {
+			if user, exists = usersCache[userID]; !exists {
+				if user, err = services.FindUserByID(ctx, userID, group); err != nil {
+					log.Println("could not fetch user with id '", userID, "'")
 					return nil, err
 				}
-				usersCache[userId] = user
+				usersCache[userID] = user
 			}
 			ok, err := IsUserAvailable(ctx, &user, &entry, group)
 			if err != nil {
@@ -522,7 +522,7 @@ func assignOrUnassignPlanningEntry(entry types.PlanningEntry, project types.Proj
 				return comment.UserID == id
 			})
 		})
-		if _, err := db.InsertOrUpdate(ctx, &entry, planningCol); err != nil {
+		if _, err = db.InsertOrUpdate(ctx, &entry, planningCol); err != nil {
 			return nil, err
 		}
 	}

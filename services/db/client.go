@@ -99,7 +99,7 @@ func GetCollection(collectionName string, group types.Group) (*mongo.Collection,
 	if db, ok := groupDatabases[group]; ok {
 		return db.Collection(collectionName, &options.CollectionOptions{}), nil
 	}
-	return nil, fmt.Errorf("Group %s doesn't exist", group)
+	return nil, fmt.Errorf("group %s doesn't exist", group)
 }
 
 func FilterByID(id string) primitive.M {
