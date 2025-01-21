@@ -30,7 +30,7 @@ func validatePlanningCycle(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
 	}
 	cycle := types.PlanningCycle{}
-	if err := c.Bind(&cycle); err != nil {
+	if err = c.Bind(&cycle); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -54,7 +54,7 @@ func validatePlanningEntry(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
 	}
 	entry := types.PlanningEntry{}
-	if err := c.Bind(&entry); err != nil {
+	if err = c.Bind(&entry); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -73,7 +73,7 @@ func upsertPlanningCycle(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
 	}
 	cycle := types.PlanningCycle{}
-	if err := c.Bind(&cycle); err != nil {
+	if err = c.Bind(&cycle); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -92,7 +92,7 @@ func upsertPlanningEntry(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, fmt.Errorf("admin user not found in context"))
 	}
 	planningEntry := types.PlanningEntry{}
-	if err := c.Bind(&planningEntry); err != nil {
+	if err = c.Bind(&planningEntry); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
